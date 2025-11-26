@@ -13,7 +13,7 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] - %(message)s",
     handlers=[
         logging.FileHandler(log_file),
-        logging.StreamHandler() 
+        # logging.StreamHandler() 
     ]
 )
 logger = logging.getLogger(__name__)
@@ -51,7 +51,7 @@ def search_api():
         
         # 1. Search Text/CLIP
         if description:
-            clip_results = search_system.clip_search(description, max_results=500)
+            clip_results = search_system.clip_search(description, max_results=1000)
             result_sets.append(clip_results)
     
         # 2. Search Objects
@@ -64,7 +64,7 @@ def search_api():
         # 3. Search Transcript
         transcript_text = query_data.get('transcript') or query_data.get('audio')
         if transcript_text:
-            transcript_results = search_system.transcript_search(transcript_text)
+            transcript_results = search_system.transcript_search(transcript_text, max_results=1000)
             result_sets.append(transcript_results)
 
         # Giao các tập kết quả
@@ -76,7 +76,7 @@ def search_api():
             item['fps'] = VIDEO_METADATA.get(vid, 25.0)
 
         logger.info(f"Search completed. Number of results: {len(results)}")
-        return jsonify(results)
+        return jsonify(results[:1000])
     except Exception as e:
         logger.error(f"An error occurred during search: {e}", exc_info=True)
         return jsonify({"error": "An internal error occurred during search."}), 500
