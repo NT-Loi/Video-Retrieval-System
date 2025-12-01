@@ -13,12 +13,14 @@ logger = logging.getLogger(__name__)
 class TextEncoder:
     def __init__(self, device: str = "cuda"):
         self.device = device
-        logger.info(
-            f"Loading model '{config.CLIP_MODEL_NAME}' to device '{self.device}'..."
+        logger.info(f"Loading model '{config.CLIP_MODEL_NAME}' to device '{self.device}'...")
+        self.model, _, _ = open_clip.create_model_and_transforms(
+            config.CLIP_MODEL_NAME,
+            pretrained=config.CLIP_PRETRAINED
         )
-        self.model, _, self.preprocessor = open_clip.create_model_and_transforms(
-            config.CLIP_MODEL_NAME, pretrained=config.CLIP_PRETRAINED
-        )
+        
+        del self.model.visual
+        
         self.model = self.model.to(self.device)
         self.model.eval()
         self.tokenizer = open_clip.get_tokenizer(config.CLIP_MODEL_NAME)
@@ -38,11 +40,6 @@ class TextEncoder:
 
         with torch.no_grad():
             text_features = self.model.encode_text(text_inputs)
-            return (
-                F.normalize(text_features, p=2, dim=-1)
-                .detach()
-                .cpu()
-                .numpy()
-                .astype(np.float32)
-            )
-
+            if self.device  == "cuda":
+                text_features = text_features.cpu()
+            return F.normalize(text_features, p=2, dim=-1).detach().numpy().astype(np.float32)

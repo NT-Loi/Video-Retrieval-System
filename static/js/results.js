@@ -66,6 +66,7 @@ export function displayResults(results) {
     let hls = null;
     let hoverTimeout;
     const cleanupHls = () => {
+      // console.log("Cleaning up HLS instance");
       if (hls) {
         hls.destroy();
         hls = null;
@@ -81,24 +82,31 @@ export function displayResults(results) {
         const fps = item.fps || 25;
         const startTime = Math.max(0, item.keyframe_index / fps - 1.5);
         const hlsUrl = `/hls/${videoId}/playlist.m3u8?t=${Date.now()}`;
-
+        // console.log(`Hovering on ${videoId}, starting at ${startTime}s`);
         if (Hls.isSupported()) {
-          cleanupHls();
+          // cleanupHls();
           hls = new Hls({
             startPosition: startTime,
             capLevelToPlayerSize: true,
-            autoStartLoad: true,
+            // autoStartLoad: true,
             maxBufferLength: 5,
           });
-          hls.loadSource(hlsUrl);
-          hls.attachMedia(previewVideo);
+
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
-            previewVideo.play().catch(() => {});
+            previewVideo.play().catch(e => {
+              console.warn('Autoplay failed:', e);
+            });
           });
+          
+          hls.attachMedia(previewVideo);
+          hls.loadSource(hlsUrl);
+          
         } else if (previewVideo.canPlayType("application/vnd.apple.mpegurl")) {
           previewVideo.src = hlsUrl;
           previewVideo.currentTime = startTime;
-          previewVideo.play();
+          previewVideo.play().catch(e => {
+            console.warn('Autoplay failed:', e);
+          });
         }
       }, 200);
     });

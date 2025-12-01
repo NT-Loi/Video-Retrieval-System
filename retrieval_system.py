@@ -9,6 +9,8 @@ from pymongo import MongoClient
 import config
 from utils.elasticsearch_client import get_elasticsearch_client
 from utils.text_encoder import TextEncoder
+from bson import json_util
+import json
 import torch
 
 # --- Setup Logging ---
