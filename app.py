@@ -15,7 +15,7 @@ from flask import (
 
 import config
 from retrieval_system import VideoRetrievalSystem
-from utils.video_metadata import load_video_metadata
+from utils.video_metadata import load_video_metadata, load_shot_metadata
 
 log_file = "system.log"
 logging.basicConfig(
@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 
 VIDEO_METADATA = load_video_metadata(config.VIDEOS_DIR)
+VIDEO_KEYFRAME_SHOT = load_shot_metadata(config.SHOTS_DIR)
 
 try:
     search_system = VideoRetrievalSystem(re_ingest=False)
@@ -58,10 +59,21 @@ def search_api():
         description = query_data.get("description", "")
         result_sets = []
 
-        # 1. Search Text/CLIP
+        # 1. Search by criteria
         if description:
-            clip_results = search_system.clip_search(description, max_results=500)
-            result_sets.append(clip_results)
+            if query_data.get("criteria") == "clip":
+                results = search_system.clip_search(
+                    description, max_results=500
+                )
+            elif query_data.get("criteria") == "beit3":
+                results = search_system.beit3_search(
+                    description, max_results=500
+                )
+            else:
+                results = search_system.fusion_search(
+                    description, max_results=500
+                )
+            result_sets.append(results)
 
         # 2. Search Objects
         if query_data.get("objects"):
@@ -83,6 +95,10 @@ def search_api():
             vid = item.get("video_id")
             # Lấy FPS từ Cache RAM, mặc định 25 nếu không tìm thấy
             item["fps"] = VIDEO_METADATA.get(vid, 25.0)
+
+            # Lấy thông tin shot
+            kf = str(item.get("keyframe_index"))
+            item["shot"] = VIDEO_KEYFRAME_SHOT.get(vid).get(kf)
 
         logger.info(f"Search completed. Number of results: {len(results)}")
         return jsonify(results)

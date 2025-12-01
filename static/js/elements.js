@@ -3,6 +3,9 @@ export const elements = {
   toggleFiltersBtn: document.getElementById("toggle-filters-btn"),
   advancedFilters: document.getElementById("advanced-filters"),
 
+  // Criteria Filter
+  criteriaSelect: document.getElementById("criteria-select"),
+
   // Object Filter Inputs
   addObjectBtn: document.getElementById("add-object-btn"),
   objectList: document.getElementById("object-list"),
@@ -19,6 +22,9 @@ export const elements = {
   // Results & Controls
   resultsContainer: document.getElementById("results-container"),
   sortBySelect: { value: "clip_score" },
+  sortControlsBar: document.getElementById("sort-controls-bar"),
+  // sortByClipBtn: document.getElementById("sort-by-clip-btn"),
+  sortByShotBtn: document.getElementById("sort-by-shot-btn"),
 
   // Video Modal
   modalOverlay: document.getElementById("video-modal"),

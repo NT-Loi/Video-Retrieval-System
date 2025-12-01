@@ -8,7 +8,7 @@ from pymongo import MongoClient
 
 import config
 from utils.elasticsearch_client import get_elasticsearch_client
-from utils.text_encoder import TextEncoder
+from utils.text_encoder import CLIPTextEncoder, BEIT3TextEncoder
 from bson import json_util
 import json
 import torch
@@ -29,8 +29,11 @@ class VideoRetrievalSystem:
         # --- Milvus ---
         connections.connect("default", host=config.MILVUS_HOST, port=config.MILVUS_PORT)
         logger.info("Successfully connected to Milvus.")
-        self.keyframes_collection = Collection(config.KEYFRAME_COLLECTION_NAME)
-        self.keyframes_collection.load()
+        self.clip_collection = Collection(config.CLIP_COLLECTION_NAME)
+        self.clip_collection.load() 
+
+        # self.beit3_collection = Collection(config.BEIT3_COLLECTION_NAME)
+        # self.beit3_collection.load()
 
         # --- MongoDB ---
         mongo_client = MongoClient(config.MONGO_URI)
@@ -44,7 +47,8 @@ class VideoRetrievalSystem:
 
         # Initialize the text encoder
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.encoder = TextEncoder(device=self.device)
+        self.clip_encoder = CLIPTextEncoder(device=self.device)
+        self.beit3_encoder = BEIT3TextEncoder(device=self.device)
 
     def clip_search(self, query: str = "", max_results: int = 200) -> list:
         """
@@ -56,11 +60,11 @@ class VideoRetrievalSystem:
             logger.warning("Search initiated with no query data.")
             return []
 
-        query_vector = self.encoder.encode(query)
+        query_vector = self.clip_encoder.encode(query)
 
         search_params = {"metric_type": "COSINE", "params": {"nprobe": 10}}
 
-        search_results = self.keyframes_collection.search(
+        search_results = self.clip_collection.search(
             data=query_vector,
             anns_field="keyframe_vector",
             param=search_params,
@@ -81,6 +85,92 @@ class VideoRetrievalSystem:
 
         logger.info(f"CLIP: Found {len(keyframe_scores)} potential keyframes.")
         return keyframe_scores
+    
+    def beit3_search(self, query: str = "", max_results: int = 200) -> list:
+        """
+        Searching on BEiT-3 embeddings.
+        """
+        logger.info(f"--- Start searching on BEiT-3 embeddings with query: '{query}' ---")
+
+        if not query:
+            logger.warning("Search initiated with no query data.")
+            return []
+
+        query_vector = self.beit3_encoder.encode(query)
+
+        search_params = {"metric_type": "COSINE", "params": {"nprobe": 10}}
+
+        search_results = self.beit3_collection.search(
+            data=query_vector,
+            anns_field="keyframe_vector",
+            param=search_params,
+            limit=max_results,
+            output_fields=["video_id", "keyframe_index"],
+        )
+
+        keyframe_scores = []
+        if search_results:
+            for hit in search_results[0]:
+                keyframe_scores.append(
+                    {
+                        "video_id": hit.entity.get("video_id"),
+                        "keyframe_index": hit.entity.get("keyframe_index"),
+                        "beit3_score": hit.distance,
+                    }
+                )
+
+        logger.info(f"BEiT-3: Found {len(keyframe_scores)} potential keyframes.")
+        return keyframe_scores
+    
+    def fusion_search(self, query: str = "", max_results: int = 200) -> list:
+        """
+        Searching on fused CLIP + BEiT-3 embeddings.
+        """
+        logger.info(f"--- Start searching on Fused embeddings with query: '{query}' ---")
+
+        if not query:
+            logger.warning("Search initiated with no query data.")
+            return []
+
+        clip_search_results = self.clip_search(query, max_results*2)
+        beit3_search_results = self.beit3_search(query, max_results*2)
+
+        # --- Merge by (video_id, keyframe_index) ---
+        merged = {}
+
+        # Add CLIP scores
+        for item in clip_search_results:
+            key = (item["video_id"], item["keyframe_index"])
+            merged.setdefault(key, {})
+            merged[key].update({
+                "video_id": item["video_id"],
+                "keyframe_index": item["keyframe_index"],
+                "clip_score": item["clip_score"],
+            })
+
+        # Add BEiT3 scores
+        for item in beit3_search_results:
+            key = (item["video_id"], item["keyframe_index"])
+            merged.setdefault(key, {})
+            merged[key].update({
+                "video_id": item["video_id"],
+                "keyframe_index": item["keyframe_index"],
+                "beit3_score": item["beit3_score"],
+            })
+
+        # --- Compute weighted score ---
+        results = []
+        w_clip = 0.5
+        w_beit3 = 0.5
+        for (_, _), item in merged.items():
+            clip_s = item.get("clip_score", 0)
+            beit_s = item.get("beit3_score", 0)
+            item["fusion_score"] = w_clip * clip_s + w_beit3 * beit_s
+            results.append(item)
+
+        # --- Sort by fused distance ---
+        results.sort(key=lambda x: x["fusion_score"], reverse=True)
+        return results[:max_results]
 
     def object_search(self, queries: list[dict], projection: dict = None) -> list[dict]:
         """

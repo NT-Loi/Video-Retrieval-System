@@ -219,7 +219,7 @@ main {
 }
 
 .result-scores {
-  font-size: 11px;
+  font-size: 14px;
   color: #666;
   margin: 0;
   line-height: 1.4;
@@ -390,4 +390,56 @@ main {
   font-weight: bold;
   color: #555;
   align-self: center;
+}
+
+/* === SORT CONTROLS BAR === */
+.sort-controls-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 15px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+  margin-bottom: 15px;
+  border-radius: 4px;
+}
+
+.sort-controls-bar.hidden {
+  display: none;
+}
+
+.sort-label {
+  font-weight: 600;
+  color: #495057;
+  margin-right: 5px;
+  font-size: 14px;
+}
+
+.sort-btn {
+  padding: 8px 14px;
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: #495057;
+  transition: all 0.2s ease;
+}
+
+.sort-btn:hover {
+  background: #e9ecef;
+  border-color: #adb5bd;
+}
+
+.sort-btn.active-sort {
+  background: #e76f51;
+  color: white;
+  border-color: #e76f51;
+  box-shadow: 0 2px 4px rgba(231, 111, 81, 0.3);
+}
+
+.sort-btn.active-sort:hover {
+  background: #d85a3a;
+  border-color: #d85a3a;
 }

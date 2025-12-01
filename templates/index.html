@@ -22,6 +22,13 @@
 
         <div id="advanced-filters" class="hidden compact-filters">
           <div class="filter-row">
+            <select id="criteria-select">
+              <option value="fusion">Fusion Score</option>
+              <option value="clip">CLIP Score</option>
+              <option value="beit3">BEiT-3 Score</option>
+            </select>
+          </div>
+          <div class="filter-row">
             <input type="text" id="audio-filter" name="audio" placeholder="Audio transcript..." autocomplete="off">
           </div>
           <div class="filter-row object-controls">
@@ -49,6 +56,11 @@
         style="padding: 8px 15px; background: #e76f51; color: white; border: none; border-radius: 4px; cursor: pointer;">
         Login
       </button>
+      <div id="sort-controls-bar" class="sort-controls-bar">
+        <span class="sort-label">Sort by:</span>
+        <!-- <button id="sort-by-clip-btn" class="sort-btn active-sort">📊 Clip Score</button> -->
+        <button id="sort-by-shot-btn" class="sort-btn active-sort">🎬 Shot</button>
+      </div>
     </div>
   </div>
 

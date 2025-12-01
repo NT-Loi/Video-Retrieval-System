@@ -95,9 +95,9 @@ def setup_milvus_collection(collection_name, schema, index_field, index_params):
     logger.info("Index created and data flushed.")
     return collection
 
-def ingest_keyframe_data(collection: Collection):
+def ingest_keyframe_data(collection: Collection, root_folder: str):
     logger.info("Ingesting keyframe data into Milvus...")
-    root = Path(config.CLIP_FEATURES_DIR)
+    root = Path(root_folder)
     
     # Kiểm tra thư mục embedding có tồn tại không
     if not root.exists():
@@ -323,6 +323,7 @@ def main():
     ingest_transcript_data(es_client, config.TRANSCRIPTS_DIR)
 
     # --- Milvus Ingestion ---
+    ### Ingest CLIP keyframe embeddings
     connections.connect("default", host=config.MILVUS_HOST, port=config.MILVUS_PORT)
     kf_fields = [
         FieldSchema(name="pk", dtype=DataType.INT64, is_primary=True, auto_id=True),
@@ -333,8 +334,12 @@ def main():
     kf_schema = CollectionSchema(kf_fields, "Keyframe vectors")
     kf_index_params = {"metric_type": "COSINE", "index_type": "IVF_FLAT", "params": {"nlist": 128}}
     
-    kf_collection = setup_milvus_collection(config.KEYFRAME_COLLECTION_NAME, kf_schema, "keyframe_vector", kf_index_params)
-    ingest_keyframe_data(kf_collection)
+    kf_collection = setup_milvus_collection(config.CLIP_COLLECTION_NAME, kf_schema, "keyframe_vector", kf_index_params)
+    ingest_keyframe_data(kf_collection, config.CLIP_FEATURES_DIR)
+
+    ### Ingest BEIT3 keyframe embeddings    
+    kf_collection = setup_milvus_collection(config.BEIT3_COLLECTION_NAME, kf_schema, "keyframe_vector", kf_index_params)
+    ingest_keyframe_data(kf_collection, config.BEIT3_FEATURES_DIR)
 
     # --- MongoDB Ingestion ---
     mongo_client = MongoClient(config.MONGO_URI)
@@ -346,10 +351,10 @@ def main():
     )
     ingest_object_detection_data(object_collection, folder_path=config.OBJECT_DETECTION_DIR)
 
-    logger.info("--- DATA INGESTION COMPLETE ---")
-
     # Close connections
     mongo_client.close()
+
+    logger.info("--- DATA INGESTION COMPLETE ---")
 
 if __name__ == "__main__":
     main()

@@ -21,6 +21,8 @@ export function displayResults(results) {
     resultElement.dataset.videoId = item.video_id;
     resultElement.dataset.keyframeIndex = item.keyframe_index;
     resultElement.dataset.fps = item.fps;
+    resultElement.dataset.shotId = item.shot;
+    resultElement.dataset.clipScore = item.clip_score || 0; // Store clip score for sorting
     resultElement.style.cursor = "pointer";
 
     const imageUrl = `/keyframes/${item.video_id}/keyframe_${item.keyframe_index}.webp`;
@@ -39,6 +41,12 @@ export function displayResults(results) {
     previewContainer.appendChild(previewVideo);
 
     // --- HTML Cấu trúc Card ---
+    const scoreLabels = {
+      clip_score: "CLIP",
+      beit3_score: "BEiT-3",
+      fusion_score: "Fusion",
+    };
+
     resultElement.innerHTML = `
         <img 
             src="${imageUrl}" 
@@ -50,12 +58,14 @@ export function displayResults(results) {
             <h3>${item.video_id} / ${item.keyframe_index}</h3>
             <div class="result-scores">
                 <span>FPS: ${item.fps}</span>
-                ${["clip_score"]
+                ${["fusion_score", "clip_score", "beit3_score"]
                   .map((score) => {
+                    const label = scoreLabels[score];
                     const val = item[score] ? item[score].toFixed(4) : "N/A";
-                    return `<span class="${isSorted ? "sorted-by" : ""}">Clip: ${val}</span>`;
+                    return `<span>${label}: ${val}</span>`;
                   })
                   .join("")}
+                ${item.shot ? `<span>Shot: ${item.shot}</span>` : "N/A"}
             </div>
             <button class="card-submit-btn" type="button">Submit</button>
         </div>`;
@@ -164,4 +174,69 @@ export function displayResults(results) {
 
     elements.resultsContainer.appendChild(resultElement);
   });
+  
+  // Initialize sort button event listeners
+  initializeSortButtons();
+}
+
+function initializeSortButtons() {
+  console.log("Initializing sort button event listeners");
+  console.log("Sort by Shot Button:", elements.sortByShotBtn);  
+  if (elements.sortByShotBtn) {
+    console.log("Adding click listener to Sort by Shot Button");
+    elements.sortByShotBtn.addEventListener("click", () => {
+      sortResults("shot");
+      updateSortButtonStates("shot");
+    });
+  }
+}
+
+function sortResults(sortBy) {
+  const resultItems = Array.from(
+    elements.resultsContainer.querySelectorAll(".result-item")
+  );
+
+  if (sortBy === "shot") {
+    const shotScoreMap = new Map();
+    resultItems.forEach((item) => {
+      const shotId = item.dataset.shotId;
+      const score = parseFloat(item.dataset[elements.criteriaSelect.value]);
+      
+      if (!shotScoreMap.has(shotId)) {
+        shotScoreMap.set(shotId, score);
+      } else {
+        shotScoreMap.set(shotId, Math.max(shotScoreMap.get(shotId), score));
+      }
+    });
+
+    // Sort by shot score (max keyframe score) descending
+    resultItems.sort((a, b) => {
+      const shotA = a.dataset.shotId || "unknown";
+      const shotB = b.dataset.shotId || "unknown";
+      const scoreA = shotScoreMap.get(shotA) || 0;
+      const scoreB = shotScoreMap.get(shotB) || 0;
+      
+      // Sort by score descending, then by shot name ascending
+      if (scoreB !== scoreA) {
+        return scoreB - scoreA;
+      }
+      return shotA.localeCompare(shotB);
+    });
+  }
+
+  // Clear and re-append sorted items
+  elements.resultsContainer.innerHTML = "";
+  resultItems.forEach((item) => {
+    elements.resultsContainer.appendChild(item);
+  });
+}
+
+function updateSortButtonStates(activeSort) {
+  if (elements.sortByShotBtn) {
+    if (activeSort === "shot") {
+      elements.sortByShotBtn.classList.add("active-sort");
+    } else {
+      elements.sortByShotBtn.classList.remove("active-sort");
+    }
+  }
 }

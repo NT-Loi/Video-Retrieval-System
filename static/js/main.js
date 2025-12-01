@@ -103,6 +103,7 @@ document.addEventListener("DOMContentLoaded", () => {
       description: formData.get("description"),
       objects: getObjectQueries(),
       audio: formData.get("audio"),
+      criteria: elements.criteriaSelect.value || "fusion", // Default to "fusion"
     };
 
     // Clear old results
