@@ -18,13 +18,17 @@ export const elements = {
 
   // Results & Controls
   resultsContainer: document.getElementById("results-container"),
-  // sortBySelect: Removed from HTML, so removing reference here prevents errors if accessed
-  sortBySelect: { value: "clip_score" }, // Mock object to keep result.js working without refactor
+  sortBySelect: { value: "clip_score" },
 
-  // Modal
+  // Video Modal
   modalOverlay: document.getElementById("video-modal"),
   closeModalBtn: document.getElementById("close-modal-btn"),
   modalVideoPlayer: document.getElementById("modal-video-player"),
   modalVideoTitle: document.getElementById("modal-video-title"),
   modalContent: document.querySelector(".modal-content"),
+
+  // --- NEW: Evaluation Modal ---
+  evalModal: document.getElementById("evaluation-modal"),
+  evalListContainer: document.getElementById("evaluation-list"),
+  cancelEvalBtn: document.getElementById("cancel-eval-btn"),
 };

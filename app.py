@@ -134,7 +134,7 @@ def serve_hls(video_id, filename):
 @app.route("/api/login", methods=["POST"])
 def login_proxy():
     """
-    Thực hiện Login và lấy luôn Evaluation ID
+    Thực hiện Login và lấy danh sách Evaluation
     """
     try:
         # 1. Login
@@ -178,14 +178,12 @@ def login_proxy():
         if not eval_list:
             return jsonify({"error": "No evaluations found"}), 404
 
-        # Lấy evaluation ID đầu tiên (theo logic submit.py mẫu)
-        evaluation_id = eval_list[0]["id"]
-
+        # --- UPDATE: Trả về toàn bộ danh sách để Client chọn ---
         return jsonify(
             {
                 "message": "Login successful",
                 "sessionId": session_id,
-                "evaluationId": evaluation_id,
+                "evaluations": eval_list,  # Trả về list
             }
         )
 

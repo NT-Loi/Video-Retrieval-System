@@ -77,6 +77,19 @@
       </div>
     </div>
   </div>
+
+  <div id="evaluation-modal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 500px;">
+      <h3>Select Evaluation</h3>
+      <div id="evaluation-list" style="max-height: 300px; overflow-y: auto; margin-bottom: 20px;">
+      </div>
+      <div style="text-align: right;">
+        <button id="cancel-eval-btn"
+          style="padding: 8px 15px; background: #6c757d; color: white; border: none; border-radius: 4px; margin-right: 10px; cursor:pointer;">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 
