@@ -3,6 +3,9 @@ export const elements = {
   toggleFiltersBtn: document.getElementById("toggle-filters-btn"),
   advancedFilters: document.getElementById("advanced-filters"),
 
+  // NEW: Group Shots Toggle
+  toggleGroupShotsBtn: document.getElementById("toggle-group-shots-btn"),
+
   // Object Filter Inputs
   addObjectBtn: document.getElementById("add-object-btn"),
   objectList: document.getElementById("object-list"),
@@ -14,7 +17,7 @@ export const elements = {
   loginBtn: document.getElementById("login-btn"),
 
   // Modal Submit
-  modalSubmitBtn: document.getElementById("modal-submit-btn"),
+  // modalSubmitBtn: document.getElementById("modal-submit-btn"), // Đã xóa static
 
   // Results & Controls
   resultsContainer: document.getElementById("results-container"),
@@ -25,7 +28,11 @@ export const elements = {
   closeModalBtn: document.getElementById("close-modal-btn"),
   modalVideoPlayer: document.getElementById("modal-video-player"),
   modalVideoTitle: document.getElementById("modal-video-title"),
-  modalContent: document.querySelector(".modal-content"),
+
+  // NEW: Sidebar containers
+  modalContentWrapper: document.querySelector(".modal-content-wrapper"),
+  modalPlayerSection: document.querySelector(".modal-player-section"),
+  modalShotList: document.getElementById("modal-shot-list"),
 
   // --- NEW: Evaluation Modal ---
   evalModal: document.getElementById("evaluation-modal"),

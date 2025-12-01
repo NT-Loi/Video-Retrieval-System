@@ -310,23 +310,39 @@ main {
 }
 
 .video-player-wrapper {
+  flex: 1;
+  /* Chiếm toàn bộ không gian còn thừa */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  /* Căn video vào giữa theo chiều dọc */
+  align-items: center;
+  min-height: 0;
+  /* QUAN TRỌNG: Cho phép Flex item thu nhỏ hơn nội dung con */
+  background: #000;
   position: relative;
   width: 100%;
 }
 
 .video-player-wrapper video {
   width: 100%;
-  display: block;
+  height: 100%;
+  object-fit: contain;
+  /* Đảm bảo video luôn nằm trọn trong khung, không bị cắt */
+  max-height: 100%;
 }
 
 /* --- UPDATED: Thanh timeline to hơn --- */
 .video-timeline {
-  position: relative;
-  height: 20px;
-  background: #444;
-  margin-top: 8px;
+  width: 100%;
+  height: 40px;
+  background: #333;
   cursor: pointer;
-  border-radius: 2px;
+  position: relative;
+  z-index: 50;
+  /* Đảm bảo nổi lên trên */
+  flex-shrink: 0;
+  /* Không bị co lại */
 }
 
 .timeline-preview {
@@ -340,7 +356,7 @@ main {
   display: none;
   pointer-events: none;
   z-index: 1001;
-  bottom: 25px;
+  bottom: 36px;
 }
 
 .timeline-preview img {
@@ -365,12 +381,14 @@ main {
 .frame-controls {
   display: flex;
   justify-content: space-between;
-  /* Đẩy Submit sang trái, Frame controls sang phải/giữa */
   align-items: center;
-  margin-top: 15px;
-  padding: 10px;
+  padding: 10px 15px;
   background: #f0f0f0;
-  border-radius: 4px;
+  color: #333;
+  flex-shrink: 0;
+  /* QUAN TRỌNG: Không bao giờ bị co lại khi video to ra */
+  z-index: 60;
+  border-top: 1px solid #ccc;
 }
 
 /* Nhóm nút điều khiển frame nằm ở giữa hoặc bên phải */
@@ -438,4 +456,226 @@ main {
 
 .frame-input[type=number] {
   -moz-appearance: textfield;
+}
+
+/* Toggle Button Style */
+#toggle-group-shots-btn {
+  padding: 8px 15px;
+  font-size: 14px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background 0.3s;
+  background-color: #6c757d;
+  /* Default OFF color */
+  color: white;
+}
+
+#toggle-group-shots-btn.active {
+  background-color: #2a9d8f;
+  /* ON color */
+}
+
+/* === SHOT GROUP CARD === */
+.shot-group-card {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.shot-group-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.shot-thumbnails-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  width: 100%;
+  height: 240px;
+  gap: 1px;
+  background: #ccc;
+}
+
+.shot-thumbnails-grid img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Xử lý layout grid khi có ít ảnh */
+.shot-thumbnails-grid.items-1 {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+}
+
+.shot-thumbnails-grid.items-2 {
+  grid-template-columns: 1fr 1fr;
+  /* Chia đôi chiều ngang */
+  grid-template-rows: 100%;
+  /* Full chiều dọc */
+}
+
+.shot-thumbnails-grid.items-3 {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+
+/* item thứ 3 trong grid 3 ảnh sẽ full width dòng dưới nếu muốn, hoặc cứ để grid tự nhiên */
+.shot-thumbnails-grid.items-3 img:nth-child(3) {
+  grid-column: span 2;
+}
+
+
+.shot-info {
+  padding: 10px;
+  border-top: 1px solid #eee;
+}
+
+.shot-info h3 {
+  margin: 0 0 5px 0;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.shot-stats {
+  font-size: 12px;
+  color: #666;
+}
+
+/* === MODAL LAYOUT MỚI === */
+.modal-content-wrapper {
+  background-color: #fff;
+  border-radius: 8px;
+  width: 90%;
+  height: 85vh;
+  display: flex;
+  overflow: hidden;
+  /* Quan trọng: cắt phần thừa */
+  position: relative;
+}
+
+.modal-player-section {
+  flex: 3;
+  padding: 0;
+  /* Xóa padding để dễ căn chỉnh */
+  display: flex;
+  flex-direction: column;
+  /* Xếp dọc: Video ở trên, Controls ở dưới */
+  position: relative;
+  background: #000;
+  color: #fff;
+  height: 100%;
+  /* Full chiều cao wrapper */
+}
+
+.modal-player-section h3 {
+  padding: 15px;
+  margin: 0;
+  background: rgba(0, 0, 0, 0.5);
+  /* Nền mờ đè lên video nếu cần */
+  position: absolute;
+  /* Đè lên góc trên để tiết kiệm chỗ */
+  top: 0;
+  left: 0;
+  z-index: 20;
+  font-size: 14px;
+  pointer-events: none;
+  /* Để click xuyên qua nếu cần */
+}
+
+.modal-sidebar {
+  flex: 1;
+  min-width: 250px;
+  background: #f8f9fa;
+  border-left: 1px solid #ddd;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-sidebar h4 {
+  padding: 15px;
+  margin: 0;
+  background: #e9ecef;
+  border-bottom: 1px solid #ddd;
+}
+
+.shot-list-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sidebar-keyframe-item {
+  display: flex;
+  gap: 10px;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 4px;
+  transition: background 0.2s;
+  border: 1px solid transparent;
+}
+
+.sidebar-keyframe-item:hover {
+  background: #e2e6ea;
+}
+
+.sidebar-keyframe-item.active {
+  background: #d1e7dd;
+  border-color: #198754;
+}
+
+.sidebar-keyframe-item img {
+  width: 80px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 2px;
+}
+
+.sidebar-info {
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* --- RED SHOT TIMELINE --- */
+.shot-highlight-bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background-color: rgba(220, 53, 69, 0.8);
+  /* Màu đỏ */
+  z-index: 5;
+  pointer-events: none;
+}
+
+/* Override nút close để hiển thị trên nền đen */
+.modal-player-section .close-btn {
+  color: #fff;
+  z-index: 30;
+  /* Cao hơn title */
+  top: 10px;
+  right: 15px;
+}
+
+.active-viewed-card {
+  border: 3px solid #2a9d8f !important;
+  /* Viền xanh nổi bật */
+  box-shadow: 0 0 15px rgba(42, 157, 143, 0.6) !important;
+  transform: scale(1.02);
+  /* Phóng to nhẹ */
+  transition: all 0.2s ease;
+  z-index: 5;
+  /* Nổi lên trên các card khác */
 }

@@ -18,6 +18,7 @@
           <input type="text" id="main-query" name="description" placeholder="Description query..." autocomplete="off">
           <button type="submit" id="search-btn">Search</button>
           <button type="button" id="toggle-filters-btn">▼ Filters</button>
+          <button type="button" id="toggle-group-shots-btn" class="toggle-btn-off">Group Shots: OFF</button>
         </div>
 
         <div id="advanced-filters" class="hidden compact-filters">
@@ -28,12 +29,6 @@
             <select id="object-select">
               <option value="person">Person</option>
               <option value="car">Car</option>
-              <option value="dog">Dog</option>
-              <option value="cat">Cat</option>
-              <option value="tree">Tree</option>
-              <option value="chair">Chair</option>
-              <option value="table">Table</option>
-              <option value="screen">Screen</option>
             </select>
             <input type="number" id="object-confidence" value="0.7" step="0.1" max="1" placeholder="Conf">
             <input type="number" id="object-min" value="1" min="1" placeholder="Min">
@@ -61,25 +56,30 @@
   <button id="scroll-top-btn" title="Press Space to scroll top">▲</button>
 
   <div id="video-modal" class="modal-overlay hidden">
-    <div class="modal-content">
-      <button id="close-modal-btn" class="close-btn">&times;</button>
-      <h3 id="modal-video-title">Loading...</h3>
-
-      <div class="video-player-wrapper">
-        <video id="modal-video-player" width="100%" controls autoplay></video>
+    <div class="modal-content-wrapper">
+      <div class="modal-player-section">
+        <button id="close-modal-btn" class="close-btn">&times;</button>
+        <h3 id="modal-video-title">Loading...</h3>
+        <div class="video-player-wrapper">
+          <video id="modal-video-player" width="100%" controls autoplay></video>
+        </div>
       </div>
 
+      <div class="modal-sidebar">
+        <h4>Keyframes in Shot</h4>
+        <div id="modal-shot-list" class="shot-list-container">
+        </div>
+      </div>
     </div>
   </div>
 
   <div id="evaluation-modal" class="modal-overlay hidden">
     <div class="modal-content" style="max-width: 500px;">
       <h3>Select Evaluation</h3>
-      <div id="evaluation-list" style="max-height: 300px; overflow-y: auto; margin-bottom: 20px;">
-      </div>
+      <div id="evaluation-list" style="max-height: 300px; overflow-y: auto; margin-bottom: 20px;"></div>
       <div style="text-align: right;">
         <button id="cancel-eval-btn"
-          style="padding: 8px 15px; background: #6c757d; color: white; border: none; border-radius: 4px; margin-right: 10px; cursor:pointer;">Cancel</button>
+          style="padding: 8px 15px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor:pointer;">Cancel</button>
       </div>
     </div>
   </div>

@@ -5,33 +5,42 @@ import { displayResults } from "./results.js";
 import { initVideoModal } from "./video-player.js";
 
 let currentResults = [];
+let isGroupShots = false; // Trạng thái mặc định
 
 document.addEventListener("DOMContentLoaded", () => {
-  // Initialize UI Logic
   initFilters();
   initVideoModal();
 
-  // --- XỬ LÝ LOGIN VÀ CHỌN EVALUATION ---
+  // --- TOGGLE GROUP SHOTS ---
+  if (elements.toggleGroupShotsBtn) {
+    elements.toggleGroupShotsBtn.addEventListener("click", () => {
+      isGroupShots = !isGroupShots;
+
+      // Update UI Button
+      elements.toggleGroupShotsBtn.textContent = isGroupShots
+        ? "Group Shots: ON"
+        : "Group Shots: OFF";
+      elements.toggleGroupShotsBtn.classList.toggle("active", isGroupShots);
+
+      // Re-display results without API call
+      displayResults(currentResults, isGroupShots);
+    });
+  }
+
+  // --- XỬ LÝ LOGIN VÀ CHỌN EVALUATION (Giữ nguyên) ---
   if (elements.loginBtn) {
     elements.loginBtn.addEventListener("click", async () => {
       elements.loginBtn.textContent = "Logging in...";
       try {
         const data = await loginAPI();
-
-        // Data format: { sessionId: "...", evaluations: [ {id:..., name:...}, ... ] }
-
         if (!data.evaluations || data.evaluations.length === 0) {
           throw new Error("No active evaluations found.");
         }
-
-        // Mở Modal để user chọn
         showEvaluationModal(data.evaluations, data.sessionId);
       } catch (error) {
         alert(`Login Failed: ${error.message}`);
         elements.loginBtn.textContent = "Login failed";
         elements.loginBtn.style.background = "#dc3545";
-
-        // Reset button text after 2 seconds
         setTimeout(() => {
           elements.loginBtn.textContent = "Login";
           elements.loginBtn.style.background = "#e76f51";
@@ -40,11 +49,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Hàm hiển thị Modal chọn Evaluation
   function showEvaluationModal(evaluations, sessionId) {
     elements.evalListContainer.innerHTML = "";
-
-    // Tạo style cho list
     elements.evalListContainer.style.display = "flex";
     elements.evalListContainer.style.flexDirection = "column";
     elements.evalListContainer.style.gap = "10px";
@@ -66,25 +72,19 @@ document.addEventListener("DOMContentLoaded", () => {
         btn.style.background = "#f8f9fa";
       };
 
-      // Xử lý khi chọn
       btn.onclick = () => {
         localStorage.setItem("sessionId", sessionId);
         localStorage.setItem("evaluationId", ev.id);
-
         elements.evalModal.classList.add("hidden");
         elements.loginBtn.textContent = `Logged: ${ev.name}`;
-        elements.loginBtn.style.background = "#28a745"; // Green
+        elements.loginBtn.style.background = "#28a745";
         alert(`Selected Evaluation: ${ev.name}\nID: ${ev.id}`);
       };
-
       elements.evalListContainer.appendChild(btn);
     });
-
-    // Hiển thị modal
     elements.evalModal.classList.remove("hidden");
   }
 
-  // Xử lý nút Cancel trong Evaluation Modal
   if (elements.cancelEvalBtn) {
     elements.cancelEvalBtn.addEventListener("click", () => {
       elements.evalModal.classList.add("hidden");
@@ -96,39 +96,27 @@ document.addEventListener("DOMContentLoaded", () => {
   // 1. Search Handler
   elements.searchForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-
     const formData = new FormData(elements.searchForm);
-
     const queryData = {
       description: formData.get("description"),
       objects: getObjectQueries(),
       audio: formData.get("audio"),
     };
 
-    // Clear old results
     elements.resultsContainer.innerHTML = "<p>Searching...</p>";
-
     const results = await searchAPI(queryData);
     currentResults = results;
-    displayResults(currentResults);
+
+    // Hiển thị dựa theo trạng thái toggle hiện tại
+    displayResults(currentResults, isGroupShots);
   });
 
-  // 2. Scroll to Top Logic
+  // 2. Scroll to Top
   const scrollTopBtn = document.getElementById("scroll-top-btn");
-
-  // Function to perform immediate scroll
-  const scrollToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: "instant",
-    });
-  };
-
-  // Button Click Event
   if (scrollTopBtn) {
     scrollTopBtn.addEventListener("click", (e) => {
       e.preventDefault();
-      scrollToTop();
+      window.scrollTo({ top: 0, behavior: "instant" });
       scrollTopBtn.blur();
     });
   }
