@@ -1,17 +1,9 @@
 import logging
 import os
-import subprocess
 import traceback
 
 import requests
-from flask import (
-    Flask,
-    Response,
-    jsonify,
-    render_template,
-    request,
-    send_from_directory,
-)
+from flask import Flask, jsonify, render_template, request, send_from_directory
 
 import config
 from retrieval_system import VideoRetrievalSystem
@@ -27,7 +19,8 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-VIDEO_METADATA = load_video_metadata(config.VIDEOS_DIR)
+# --- LOAD METADATA TỪ ROOT FILE ---
+VIDEO_METADATA = load_video_metadata("video_metadata.json")
 
 try:
     search_system = VideoRetrievalSystem(re_ingest=False)
@@ -101,14 +94,7 @@ def serve_frame_image(video_id, keyframe_index):
         return send_from_directory("static", "placeholder.png"), 404
 
 
-@app.route("/videos/<path:video_id>")
-def serve_video_file(video_id):
-    try:
-        filename = f"{video_id}.mp4"
-        return send_from_directory(config.VIDEOS_DIR, filename, as_attachment=False)
-    except FileNotFoundError:
-        return "Video not found", 404
-
+# --- ĐÃ XÓA ROUTE /videos/... VÌ BẠN DÙNG HLS ---
 
 HLS_DIR = os.path.join(os.getcwd(), "data", "hls")
 
@@ -178,12 +164,11 @@ def login_proxy():
         if not eval_list:
             return jsonify({"error": "No evaluations found"}), 404
 
-        # --- UPDATE: Trả về toàn bộ danh sách để Client chọn ---
         return jsonify(
             {
                 "message": "Login successful",
                 "sessionId": session_id,
-                "evaluations": eval_list,  # Trả về list
+                "evaluations": eval_list,
             }
         )
 
