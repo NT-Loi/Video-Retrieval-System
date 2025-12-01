@@ -6,10 +6,9 @@ body {
   color: #333;
 }
 
-/* === HEADER & FORM (KHÔNG CÒN FIXED) === */
+/* === HEADER & FORM === */
 .top-control-panel {
   position: relative;
-  /* Cuộn theo trang bình thường */
   width: 100%;
   background: #fff;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
@@ -22,7 +21,6 @@ body {
 
 .left-panel {
   width: 100%;
-  /* Nếu muốn chia cột sau này thì chỉnh width ở đây */
 }
 
 .right-panel {
@@ -37,7 +35,6 @@ body {
   flex-direction: column;
   gap: 10px;
   max-width: 600px;
-  /* Giới hạn chiều rộng nhìn cho đỡ trải dài quá */
 }
 
 .search-row {
@@ -151,7 +148,6 @@ main {
 
 #results-container {
   display: grid;
-  /* Grid tự động: tối thiểu 260px, tự dãn */
   grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
   gap: 15px;
 }
@@ -168,7 +164,6 @@ main {
   flex-direction: column;
 }
 
-/* Ảnh thumbnail cao lên (240px) */
 .result-item img {
   width: 100%;
   height: 240px;
@@ -184,7 +179,6 @@ main {
   left: 0;
   width: 100%;
   height: 240px;
-  /* Khớp với chiều cao ảnh */
   background: rgba(0, 0, 0, 0.4);
   display: none;
   z-index: 10;
@@ -205,7 +199,6 @@ main {
 .result-info {
   padding: 8px 10px;
   position: relative;
-  /* Chừa chỗ cho nút submit ở góc dưới */
   padding-bottom: 40px;
 }
 
@@ -236,7 +229,6 @@ main {
   bottom: 8px;
   right: 8px;
   background-color: #28a745;
-  /* Màu xanh lá */
   color: white;
   border: none;
   border-radius: 4px;
@@ -246,7 +238,6 @@ main {
   cursor: pointer;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   z-index: 20;
-  /* Nổi lên trên cùng */
 }
 
 .card-submit-btn:hover {
@@ -328,12 +319,14 @@ main {
   display: block;
 }
 
+/* --- UPDATED: Thanh timeline to hơn --- */
 .video-timeline {
   position: relative;
-  height: 8px;
+  height: 20px;
   background: #444;
   margin-top: 8px;
   cursor: pointer;
+  border-radius: 2px;
 }
 
 .timeline-preview {
@@ -347,7 +340,7 @@ main {
   display: none;
   pointer-events: none;
   z-index: 1001;
-  bottom: 20px;
+  bottom: 25px;
 }
 
 .timeline-preview img {
@@ -363,31 +356,86 @@ main {
   transform: translateX(-50%);
   background: rgba(0, 0, 0, 0.8);
   color: #fff;
-  padding: 2px;
+  padding: 2px 6px;
   font-size: 12px;
+  border-radius: 4px;
 }
 
+/* --- UPDATED: Bố cục thanh điều khiển Frame & Submit --- */
 .frame-controls {
   display: flex;
-  justify-content: center;
-  gap: 10px;
-  margin-top: 10px;
+  justify-content: space-between;
+  /* Đẩy Submit sang trái, Frame controls sang phải/giữa */
+  align-items: center;
+  margin-top: 15px;
   padding: 10px;
   background: #f0f0f0;
   border-radius: 4px;
+}
+
+/* Nhóm nút điều khiển frame nằm ở giữa hoặc bên phải */
+.frame-navigation {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-left: auto;
+  /* Đẩy về phía phải nếu muốn, hoặc bỏ để căn đều */
+  margin-right: auto;
+  /* Để căn giữa trong không gian còn lại */
 }
 
 .frame-btn {
   background: #0077b6;
   color: white;
   border: none;
-  padding: 6px 12px;
+  padding: 5px 15px;
   border-radius: 4px;
   cursor: pointer;
+  font-size: 18px;
+  font-weight: bold;
+  min-width: 40px;
 }
 
-.frame-info {
+/* Style cho nút Submit trong modal */
+.modal-submit-btn {
+  background: #2a9d8f;
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.modal-submit-btn:hover {
+  background: #21867a;
+}
+
+.frame-input-group {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   font-weight: bold;
   color: #555;
-  align-self: center;
+}
+
+.frame-input {
+  width: 70px;
+  padding: 5px;
+  text-align: center;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.frame-input::-webkit-outer-spin-button,
+.frame-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.frame-input[type=number] {
+  -moz-appearance: textfield;
 }

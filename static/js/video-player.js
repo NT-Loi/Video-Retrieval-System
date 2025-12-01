@@ -5,47 +5,14 @@ let currentOpenVideoId = null;
 
 export function initVideoModal() {
   elements.closeModalBtn.addEventListener("click", closeModal);
+
   elements.modalOverlay.addEventListener("click", (e) => {
     if (e.target === elements.modalOverlay) {
       closeModal();
     }
   });
 
-  // --- SỰ KIỆN NÚT SUBMIT TRONG MODAL ---
-  if (elements.modalSubmitBtn) {
-    elements.modalSubmitBtn.addEventListener("click", async () => {
-      if (!currentOpenVideoId) return;
-
-      const sessionId = localStorage.getItem("sessionId");
-      const evaluationId = localStorage.getItem("evaluationId");
-
-      if (!sessionId || !evaluationId) {
-        alert("Please LOGIN first!");
-        return;
-      }
-
-      // Lấy thời gian hiện tại của player
-      const currentTime = elements.modalVideoPlayer.currentTime;
-      const timeMs = Math.round(currentTime * 1000);
-
-      const confirmSubmit = confirm(
-        `Submit time ${timeMs}ms of video ${currentOpenVideoId}?`,
-      );
-      if (!confirmSubmit) return;
-
-      try {
-        const res = await submitResultAPI(
-          sessionId,
-          evaluationId,
-          currentOpenVideoId,
-          timeMs,
-        );
-        alert(`Success! Server msg: ${JSON.stringify(res.remote_response)}`);
-      } catch (err) {
-        alert(`Submit Failed: ${err.message}`);
-      }
-    });
-  }
+  // Đã bỏ listener static cũ vì button submit giờ được tạo động trong openModal
 }
 
 export function openModal(videoId, startTime, fps) {
@@ -58,7 +25,7 @@ export function openModal(videoId, startTime, fps) {
   const hlsUrl = `/hls/${videoId}/playlist.m3u8`;
   let mainHls = null;
 
-  // --- HLS PLAYER SETUP (Thay thế MP4 Player) ---
+  // --- HLS PLAYER SETUP ---
   if (Hls.isSupported()) {
     mainHls = new Hls({
       debug: false,
@@ -68,14 +35,12 @@ export function openModal(videoId, startTime, fps) {
     mainHls.attachMedia(elements.modalVideoPlayer);
 
     mainHls.on(Hls.Events.MANIFEST_PARSED, function () {
-      // Seek đến đúng vị trí keyframe
       elements.modalVideoPlayer.currentTime = startTime;
       elements.modalVideoPlayer
         .play()
         .catch((e) => console.warn("Auto-play blocked:", e));
     });
 
-    // Xử lý lỗi fatal của HLS
     mainHls.on(Hls.Events.ERROR, function (event, data) {
       if (data.fatal) {
         switch (data.type) {
@@ -96,7 +61,6 @@ export function openModal(videoId, startTime, fps) {
   } else if (
     elements.modalVideoPlayer.canPlayType("application/vnd.apple.mpegurl")
   ) {
-    // Fallback cho Safari
     elements.modalVideoPlayer.src = hlsUrl;
     elements.modalVideoPlayer.addEventListener(
       "loadedmetadata",
@@ -107,7 +71,6 @@ export function openModal(videoId, startTime, fps) {
       { once: true },
     );
   } else {
-    // Fallback cuối cùng nếu không hỗ trợ HLS (quay về MP4 nếu cần, hoặc báo lỗi)
     console.error("HLS not supported in this browser.");
     elements.modalVideoPlayer.src = `/videos/${videoId}#t=${startTime}`;
   }
@@ -118,16 +81,9 @@ export function openModal(videoId, startTime, fps) {
     videoWrapper.style.position = "relative";
   }
 
-  // --- Create Timeline UI (Giữ nguyên logic cũ) ---
+  // --- Create Timeline UI ---
   const timelineBar = document.createElement("div");
   timelineBar.className = "video-timeline";
-  Object.assign(timelineBar.style, {
-    position: "relative",
-    height: "8px",
-    background: "#444",
-    marginTop: "8px",
-    cursor: "pointer",
-  });
 
   const progressFill = document.createElement("div");
   Object.assign(progressFill.style, {
@@ -137,22 +93,16 @@ export function openModal(videoId, startTime, fps) {
     bottom: "0",
     width: "0%",
     background: "#1db954",
+    borderRadius: "2px",
+    pointerEvents: "none",
   });
   timelineBar.appendChild(progressFill);
 
   const timelinePreview = document.createElement("div");
   timelinePreview.className = "timeline-preview";
-  Object.assign(timelinePreview.style, {
-    display: "none",
-    position: "absolute",
-    bottom: "120%",
-    transform: "translateX(-50%)",
-    zIndex: "999",
-    pointerEvents: "none",
-  });
   timelinePreview.innerHTML = `
-        <img src="" alt="Preview" style="max-width: 150px; border: 1px solid #fff; display:none;">
-        <div class="time-label" style="background: rgba(0,0,0,0.7); color: #fff; padding: 2px 5px; text-align: center;">0:00</div>
+        <img src="" alt="Preview" style="display:none;">
+        <div class="time-label">0:00</div>
     `;
   timelineBar.appendChild(timelinePreview);
   videoWrapper.appendChild(timelineBar);
@@ -160,7 +110,7 @@ export function openModal(videoId, startTime, fps) {
   const previewImg = timelinePreview.querySelector("img");
   const timeLabel = timelinePreview.querySelector(".time-label");
 
-  // --- HLS Preview Setup (Hidden Video for Hover) ---
+  // --- HLS Preview Setup ---
   const previewVideo = document.createElement("video");
   previewVideo.muted = true;
   previewVideo.preload = "metadata";
@@ -168,7 +118,6 @@ export function openModal(videoId, startTime, fps) {
   videoWrapper.appendChild(previewVideo);
 
   let previewHls = null;
-  // Reuse HLS logic for preview
   if (Hls.isSupported()) {
     previewHls = new Hls({
       maxBufferLength: 1,
@@ -226,6 +175,7 @@ export function openModal(videoId, startTime, fps) {
 
   const handleMouseMove = (e) => {
     if (!elements.modalVideoPlayer.duration) return;
+
     const rect = timelineBar.getBoundingClientRect();
     const percent = Math.max(
       0,
@@ -249,7 +199,6 @@ export function openModal(videoId, startTime, fps) {
     scheduleHoverPreview();
   };
 
-  // --- Controls & Listeners ---
   const handleTimelineClick = (e) => {
     if (!elements.modalVideoPlayer.duration) return;
     const rect = timelineBar.getBoundingClientRect();
@@ -278,48 +227,111 @@ export function openModal(videoId, startTime, fps) {
   timelineBar.addEventListener("click", handleTimelineClick);
   elements.modalVideoPlayer.addEventListener("timeupdate", updateProgress);
 
-  // --- Frame Controls ---
+  // --- Frame Controls & Submit Button ---
   const frameControls = document.createElement("div");
   frameControls.className = "frame-controls";
-  Object.assign(frameControls.style, {
-    display: "flex",
-    justifyContent: "center",
-    gap: "15px",
-  });
+
+  // HTML mới: Submit bên trái, Frame Navigation ở giữa
   frameControls.innerHTML = `
-        <button class="frame-btn" id="prev-frame-btn" style="padding: 5px 10px;">◀ Previous Frame</button>
-        <span class="frame-info" id="current-frame-info" style="line-height: 30px;">Frame: 0</span>
-        <button class="frame-btn" id="next-frame-btn" style="padding: 5px 10px;">Next Frame ▶</button>
-    `;
+        <button id="dynamic-submit-btn" class="modal-submit-btn" title="Submit this frame">Submit</button>
+        
+        <div class="frame-navigation">
+            <button class="frame-btn" id="prev-frame-btn" title="Previous Frame">-</button>
+            <div class="frame-input-group">
+                <input type="number" id="current-frame-input" class="frame-input" value="0">
+                <span id="total-frames-span">/ 0</span>
+            </div>
+            <button class="frame-btn" id="next-frame-btn" title="Next Frame">+</button>
+        </div>
+        
+        <div style="width: 80px;"></div> `;
   elements.modalContent.appendChild(frameControls);
 
   const frameRate = fps;
   const frameDuration = 1 / frameRate;
-  const frameInfo = frameControls.querySelector("#current-frame-info");
 
+  const frameInput = frameControls.querySelector("#current-frame-input");
+  const totalFramesSpan = frameControls.querySelector("#total-frames-span");
+  const dynSubmitBtn = frameControls.querySelector("#dynamic-submit-btn");
+
+  // Logic Submit mới
+  dynSubmitBtn.addEventListener("click", async () => {
+    const sessionId = localStorage.getItem("sessionId");
+    const evaluationId = localStorage.getItem("evaluationId");
+
+    if (!sessionId || !evaluationId) {
+      alert("Please LOGIN first!");
+      return;
+    }
+
+    // Lấy frame và thời gian
+    const currentFrame = Math.round(
+      elements.modalVideoPlayer.currentTime * frameRate,
+    );
+    const timeMs = Math.round(elements.modalVideoPlayer.currentTime * 1000);
+
+    // Confirm dialog với frame number
+    const confirmSubmit = confirm(
+      `Submit frame ${currentFrame} time ${timeMs}ms of video ${videoId}?`,
+    );
+    if (!confirmSubmit) return;
+
+    try {
+      const res = await submitResultAPI(
+        sessionId,
+        evaluationId,
+        videoId,
+        timeMs,
+      );
+      alert(`Success! Server msg: ${JSON.stringify(res.remote_response)}`);
+    } catch (err) {
+      alert(`Submit Failed: ${err.message}`);
+    }
+  });
+
+  // Logic Update Input khi video chạy
   const updateFrameInfo = () => {
     if (!elements.modalVideoPlayer.duration) return;
-    const currentFrame = Math.floor(
+
+    const currentFrame = Math.round(
       elements.modalVideoPlayer.currentTime * frameRate,
     );
     const totalFrames = Math.floor(
       elements.modalVideoPlayer.duration * frameRate,
     );
-    frameInfo.textContent = `Frame: ${currentFrame} / ${isNaN(totalFrames) ? "..." : totalFrames}`;
+
+    if (document.activeElement !== frameInput) {
+      frameInput.value = currentFrame;
+    }
+    totalFramesSpan.textContent = `/ ${isNaN(totalFrames) ? "..." : totalFrames}`;
   };
 
   elements.modalVideoPlayer.addEventListener("timeupdate", updateFrameInfo);
   elements.modalVideoPlayer.addEventListener("loadedmetadata", updateFrameInfo);
 
+  // Nhảy frame khi Enter
+  frameInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const targetFrame = parseInt(frameInput.value, 10);
+      if (!isNaN(targetFrame) && targetFrame >= 0) {
+        elements.modalVideoPlayer.currentTime = targetFrame / frameRate;
+        elements.modalVideoPlayer.pause();
+      }
+      frameInput.blur();
+    }
+  });
+
+  // Next/Prev logic
   const handleFrameStep = (direction) => {
     elements.modalVideoPlayer.pause();
-    const currentFrame = Math.floor(
+    const currentFrame = Math.round(
       elements.modalVideoPlayer.currentTime * frameRate,
     );
-    elements.modalVideoPlayer.currentTime = Math.max(
-      0,
-      (currentFrame + direction) * frameDuration,
-    );
+    const nextFrame = currentFrame + direction;
+    let nextTime = nextFrame / frameRate + 0.0001;
+    nextTime = Math.max(0, nextTime);
+    elements.modalVideoPlayer.currentTime = nextTime;
   };
 
   const prevBtn = document.getElementById("prev-frame-btn");
@@ -330,6 +342,8 @@ export function openModal(videoId, startTime, fps) {
 
   const handleKeyPress = (e) => {
     if (elements.modalOverlay.classList.contains("hidden")) return;
+    if (document.activeElement === frameInput) return;
+
     if (e.key === "ArrowLeft") handleFrameStep(-1);
     if (e.key === "ArrowRight") handleFrameStep(1);
     if (e.key === " ") {
@@ -342,7 +356,7 @@ export function openModal(videoId, startTime, fps) {
   };
   document.addEventListener("keydown", handleKeyPress);
 
-  // --- Store Handlers for Cleanup ---
+  // Cleanup Handlers
   elements.modalOverlay.dataset.handlersAttached = "true";
   elements.modalOverlay._cleanupHandlers = {
     handleKeyPress,
@@ -350,7 +364,7 @@ export function openModal(videoId, startTime, fps) {
     frameControls,
     previewVideo,
     previewHls,
-    mainHls, // LƯU MAIN HLS ĐỂ CLEANUP
+    mainHls,
     updateProgress,
     updateFrameInfo,
   };
@@ -379,13 +393,8 @@ export function closeModal() {
         h.updateFrameInfo,
       );
 
-      // Destroy Preview HLS
       if (h.previewHls) h.previewHls.destroy();
-
-      // Destroy Main Player HLS
-      if (h.mainHls) {
-        h.mainHls.destroy();
-      }
+      if (h.mainHls) h.mainHls.destroy();
 
       if (h.previewVideo) {
         h.previewVideo.removeAttribute("src");
