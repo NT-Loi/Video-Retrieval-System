@@ -79,7 +79,8 @@ function displayFlatResults(results) {
       const fps = parseFloat(item.fps) || 25;
       let startTime = item.keyframe_index / fps;
       startTime = Math.max(0, startTime - 0.5);
-      openModal(item.video_id, startTime, fps, null);
+
+      openModal(item.video_id, startTime, fps, null, item.keyframe_index);
     });
 
     elements.resultsContainer.appendChild(resultElement);

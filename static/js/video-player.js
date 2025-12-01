@@ -12,39 +12,48 @@ export function initVideoModal() {
   });
 }
 
-// --- HÀM HIGHLIGHT CARD ĐANG XEM ---
-function highlightActiveCard(videoId, shotData) {
-  // 1. Xóa highlight cũ
+function highlightActiveCard(videoId, shotData, specificKeyframe) {
+  // Xóa highlight cũ
   document.querySelectorAll(".active-viewed-card").forEach((el) => {
     el.classList.remove("active-viewed-card");
   });
 
   let selector = "";
 
-  // 2. Tìm card tương ứng
   if (shotData) {
-    // Chế độ Group Shot: Tìm theo key shot
+    // Chế độ Group Shot: Giữ nguyên logic cũ (theo shot key)
     const shotKey = `${videoId}|${shotData.shotStart}|${shotData.shotEnd}`;
     selector = `.shot-group-card[data-shot-key="${shotKey}"]`;
   } else {
-    // Chế độ thường: Tìm theo video ID
-    selector = `.result-item[data-video-id="${videoId}"]`;
+    // Chế độ lẻ: Tìm chính xác theo videoId VÀ keyframeIndex
+    // Lưu ý: attribute trong HTML là data-keyframe-index (kebab-case)
+    if (specificKeyframe !== undefined && specificKeyframe !== null) {
+      selector = `.result-item[data-video-id="${videoId}"][data-keyframe-index="${specificKeyframe}"]`;
+    } else {
+      // Fallback nếu không truyền keyframe (dù hiếm khi xảy ra nếu gọi đúng)
+      selector = `.result-item[data-video-id="${videoId}"]`;
+    }
   }
 
   const activeCard = document.querySelector(selector);
   if (activeCard) {
     activeCard.classList.add("active-viewed-card");
-    // Cuộn tới card đó nếu nó đang bị khuất
     activeCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
 }
 
-export function openModal(videoId, startTime, fps, shotData = null) {
-  closeModal(); // Reset state cũ
+export function openModal(
+  videoId,
+  startTime,
+  fps,
+  shotData = null,
+  specificKeyframe = null,
+) {
+  closeModal();
   currentOpenVideoId = videoId;
 
-  // Gọi hàm highlight ngay khi mở modal
-  highlightActiveCard(videoId, shotData);
+  // Truyền specificKeyframe vào hàm highlight
+  highlightActiveCard(videoId, shotData, specificKeyframe);
 
   elements.modalVideoTitle.textContent = `Playing: ${videoId} (FPS: ${fps})`;
   elements.modalOverlay.classList.remove("hidden");

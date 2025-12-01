@@ -515,21 +515,11 @@ main {
 }
 
 .shot-thumbnails-grid.items-2 {
-  grid-template-columns: 1fr 1fr;
-  /* Chia đôi chiều ngang */
-  grid-template-rows: 100%;
-  /* Full chiều dọc */
+  grid-template-columns: 100%;
+  grid-template-rows: 50% 50%;
 }
 
-.shot-thumbnails-grid.items-3 {
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr 1fr;
-}
 
-/* item thứ 3 trong grid 3 ảnh sẽ full width dòng dưới nếu muốn, hoặc cứ để grid tự nhiên */
-.shot-thumbnails-grid.items-3 img:nth-child(3) {
-  grid-column: span 2;
-}
 
 
 .shot-info {
