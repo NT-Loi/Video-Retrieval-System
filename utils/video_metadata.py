@@ -1,45 +1,58 @@
-import os
-import cv2
 import glob
+import json
 import logging
-from pathlib import Path
+import os
 
 logger = logging.getLogger(__name__)
 
-def load_video_metadata(videos_dir: str) -> dict:
-    """
-    Quét toàn bộ file .mp4 trong thư mục videos_dir.
-    Trả về một dictionary: { 'video_id': fps, ... }
-    """
-    metadata_cache = {}
-    
-    if not os.path.exists(videos_dir):
-        logger.error(f"Directory not found: {videos_dir}")
-        return metadata_cache
 
-    video_files = glob.glob(os.path.join(videos_dir, "*.mp4"))
-    logger.info(f"Loading metadata for {len(video_files)} videos into RAM...")
-
-    for video_path in video_files:
+def load_video_metadata(metadata_path: str = "video_metadata.json") -> dict:
+    """
+    Tải metadata (FPS) của video từ file JSON có sẵn.
+    """
+    if os.path.exists(metadata_path):
+        logger.info(f"Loading video metadata from '{metadata_path}'...")
         try:
-            video_id = Path(video_path).stem # Lấy tên file làm ID (VD: L01_V001)
-            cap = cv2.VideoCapture(video_path)
-            
-            if cap.isOpened():
-                fps = cap.get(cv2.CAP_PROP_FPS)
-                # Fallback nếu không đọc được FPS, mặc định 25
-                if fps <= 0 or fps is None:
-                    fps = 25.0
-                
-                metadata_cache[video_id] = fps
-                cap.release()
-            else:
-                logger.warning(f"Could not open video: {video_path}")
-                metadata_cache[video_id] = 25.0 # Fallback safe
-
+            with open(metadata_path, "r", encoding="utf-8") as f:
+                metadata = json.load(f)
+            logger.info(f"Loaded metadata for {len(metadata)} videos.")
+            return metadata
         except Exception as e:
-            logger.error(f"Error reading metadata for {video_path}: {e}")
-            metadata_cache[video_id] = 25.0
+            logger.error(f"Failed to read metadata file: {e}")
+            return {}
+    else:
+        logger.warning(
+            f"Metadata file not found at '{metadata_path}'. FPS will default to 25.0."
+        )
+        return {}
 
-    logger.info(f"Metadata loaded successfully. Cached FPS for {len(metadata_cache)} videos.")
-    return metadata_cache
+
+def load_shot_boundaries(shots_dir: str = "data/shots") -> dict:
+    """
+    Load toàn bộ file JSON trong data/shots vào RAM để tra cứu nhanh.
+    Return structure: { "Video_ID": [ {"start_frame": 0, "end_frame": 50}, ... ] }
+    """
+    shots_map = {}
+    if not os.path.exists(shots_dir):
+        logger.warning(f"Shots directory not found at {shots_dir}")
+        return shots_map
+
+    logger.info(f"Loading shot boundaries from {shots_dir}...")
+    json_files = glob.glob(os.path.join(shots_dir, "*.json"))
+
+    for fpath in json_files:
+        try:
+            # Filename format expected: L01_V001_shots.json -> Key: L01_V001
+            filename = os.path.basename(fpath)
+            video_id = filename.replace("_shots.json", "")
+
+            with open(fpath, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                # data structure: {"total": 305, "items": [{"start_frame":...}, ...]}
+                if "items" in data:
+                    shots_map[video_id] = data["items"]
+        except Exception as e:
+            logger.error(f"Error loading shot file {fpath}: {e}")
+
+    logger.info(f"Loaded shots for {len(shots_map)} videos.")
+    return shots_map
