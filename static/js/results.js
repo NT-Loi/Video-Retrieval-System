@@ -53,15 +53,26 @@ function displayFlatResults(results) {
     });
     previewContainer.appendChild(previewVideo);
 
+    const scoreLabels = {
+      fused_score: "Fused Score",
+      clip_score: "CLIP Score",
+      beit3_score: "BEiT-3 Score",
+    };
+
     resultElement.innerHTML = `
             <img src="${imageUrl}" class="result-item-image" onerror="this.onerror=null;this.src='/static/placeholder.png';">
             <div class="result-info">
                 <h3>${item.video_id} / ${item.keyframe_index}</h3>
                 <div class="result-scores">
                     <span>FPS: ${item.fps}</span>
-                    <span class="${isSorted ? "sorted-by" : ""}">Clip: ${
-                      item.clip_score ? item.clip_score.toFixed(4) : "N/A"
-                    }</span>
+                    ${["fused_score", "clip_score", "beit3_score"]
+                      .map((score) => {
+                        const label = scoreLabels[score];
+                        const value = item[score] ? item[score].toFixed(4) : "N/A";
+                        return `<span>${label}: ${value}</span>`;
+                      })
+                      .join("")
+                    }
                 </div>
                 <button class="card-submit-btn" type="button">Submit</button>
             </div>`;
@@ -91,6 +102,7 @@ function displayFlatResults(results) {
 function displayGroupedResults(results) {
   // 1. Grouping
   const groups = {}; // key: "video_id|start|end"
+  const criteria = elements.criteriaSelect.value || "fused_score";
 
   results.forEach((item) => {
     const vId = item.video_id;
@@ -107,13 +119,18 @@ function displayGroupedResults(results) {
         max_score: -1,
         items: [],
       };
-    }
+    }    
     groups[key].items.push(item);
-    if (item.clip_score > groups[key].max_score) {
-      groups[key].max_score = item.clip_score;
+    if (item[criteria] > groups[key].max_score) {
+      groups[key].max_score = item[criteria];
     }
   });
 
+  // Update max_score by multiple length groups[key].items.length
+  Object.values(groups).forEach((group) => {
+    group.max_score *= group.items.length;
+  });
+  
   // 2. Sorting by max_score
   const sortedGroups = Object.values(groups).sort(
     (a, b) => b.max_score - a.max_score,
@@ -163,7 +180,7 @@ function displayGroupedResults(results) {
     card.addEventListener("click", () => {
       // Tìm frame điểm cao nhất
       const bestFrame = group.items.reduce((prev, current) =>
-        prev.clip_score > current.clip_score ? prev : current,
+        prev[criteria] > current[criteria] ? prev : current,
       );
 
       const fps = parseFloat(group.fps) || 25;

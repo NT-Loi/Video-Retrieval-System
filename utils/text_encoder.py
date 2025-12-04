@@ -1,16 +1,17 @@
 import logging
-
+import warnings
+warnings.filterwarnings("ignore", message="pkg_resources is deprecated")
 import numpy as np
 import open_clip
 import torch
 import torch.nn.functional as F
-
+import timm
+from transformers import XLMRobertaTokenizer
 import config
-
+import unilm.beit3.modeling_finetune
 logger = logging.getLogger(__name__)
 
-
-class TextEncoder:
+class CLIPTextEncoder:
     def __init__(self, device: str = "cuda"):
         self.device = device
         logger.info(f"Loading model '{config.CLIP_MODEL_NAME}' to device '{self.device}'...")
@@ -25,15 +26,7 @@ class TextEncoder:
         self.model.eval()
         self.tokenizer = open_clip.get_tokenizer(config.CLIP_MODEL_NAME)
 
-        # Precompute common query tokens for performance
-        # Common query cache for performance
-        self.common_queries = ["person", "car", "building"]
-
-        self.precomputed_tokens = {
-            query: self.tokenizer([query]).to(self.device)
-            for query in self.common_queries
-        }
-        logger.info("TextEncoder initialized successfully.")
+        logger.info("CLIPTextEncoder initialized successfully.")
 
     def encode(self, query: str):
         text_inputs = self.tokenizer([query]).to(self.device)
@@ -43,3 +36,32 @@ class TextEncoder:
             if self.device  == "cuda":
                 text_features = text_features.cpu()
             return F.normalize(text_features, p=2, dim=-1).detach().numpy().astype(np.float32)
+
+class BEIT3TextEncoder:
+    def __init__(self, device: str = "cuda"):
+        self.device = device
+        logger.info(f"Loading {config.BEIT3_MODEL_NAME} model to device '{self.device}'...")
+        self.model = timm.create_model(config.BEIT3_MODEL_NAME, pretrained=False, checkpoint_path=config.BEIT3_MODEL_PATH)
+        self.model = self.model.to(self.device)
+        self.model.eval()
+
+        self.tokenizer = XLMRobertaTokenizer(config.BEIT3_TEXT_ENCODER_PATH)
+        logger.info("BEIT3TextEncoder initialized successfully.")
+
+    def encode(self, query: str):
+        inputs = self.tokenizer(query, return_tensors="pt", padding=True)
+        input_ids = inputs["input_ids"].to(self.device)
+
+        with torch.no_grad():
+            text_features = self.model.forward(text_description=input_ids,
+                                                only_infer=True)[-1]
+            
+            if self.device == "cuda":
+                text_features = text_features.cpu()
+            return text_features.detach().numpy().astype(np.float32)
+        
+if __name__ == "__main__":
+    encoder = BEIT3TextEncoder(device="cuda" if torch.cuda.is_available() else "cpu")
+    sample_text = "A person riding a horse on a beach."
+    features = encoder.encode(sample_text)
+    print("Features:", features)

@@ -66,10 +66,21 @@ def search_api():
         description = query_data.get("description", "")
         result_sets = []
 
-        # 1. Search Text/CLIP
+        # 1. Search by criteria
         if description:
-            clip_results = search_system.clip_search(description, max_results=1000)
-            result_sets.append(clip_results)
+            if query_data.get("criteria") == "fused_score":
+                results = search_system.fused_search(
+                    description, max_results=1000
+                )
+            elif query_data.get("criteria") == "clip_score":
+                results = search_system.clip_search(
+                    description, max_results=1000
+                )
+            else:
+                results = search_system.beit3_search(
+                    description, max_results=1000
+                )
+            result_sets.append(results)
 
         # 2. Search Objects
         if query_data.get("objects"):
@@ -79,7 +90,7 @@ def search_api():
             result_sets.append(object_results)
 
         # 3. Search Transcript
-        transcript_text = query_data.get("transcript") or query_data.get("audio")
+        transcript_text = query_data.get("audio")
         if transcript_text:
             transcript_results = search_system.transcript_search(transcript_text, max_results=1000)
             result_sets.append(transcript_results)

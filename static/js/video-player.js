@@ -187,6 +187,7 @@ export function openModal(
       );
 
       sortedItems.forEach((kf) => {
+        const criteria = elements.criteriaSelect.value || "fused_score";
         const itemDiv = document.createElement("div");
         itemDiv.className = "sidebar-keyframe-item";
         itemDiv.innerHTML = `
@@ -195,7 +196,7 @@ export function openModal(
             }.webp" loading="lazy">
             <div class="sidebar-info">
                 <strong>Frame: ${kf.keyframe_index}</strong>
-                <span>Score: ${kf.clip_score.toFixed(3)}</span>
+                <span>Score: ${kf[criteria].toFixed(4)}</span>
             </div>
           `;
         itemDiv.addEventListener("click", () => {

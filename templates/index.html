@@ -23,6 +23,13 @@
 
         <div id="advanced-filters" class="hidden compact-filters">
           <div class="filter-row">
+            <select id="criteria-select">
+              <option value="fused_score">Fused Score</option>
+              <option value="clip_score">CLIP Score</option>
+              <option value="beit3_score">BEiT-3 Score</option>
+            </select>
+          </div>
+          <div class="filter-row">
             <input type="text" id="audio-filter" name="audio" placeholder="Audio transcript..." autocomplete="off">
           </div>
           <div class="filter-row object-controls">

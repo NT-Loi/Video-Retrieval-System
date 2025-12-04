@@ -1,7 +1,8 @@
 # --- Milvus settings ---
 MILVUS_HOST = "localhost"
 MILVUS_PORT = "19530"
-KEYFRAME_COLLECTION_NAME = "video_keyframes"
+CLIP_COLLECTION_NAME = "video_keyframes"
+BEIT3_COLLECTION_NAME = "beit3_video_keyframes"
 VECTOR_DIMENSION = 1024
 
 # --- MongoDB settings ---
@@ -10,7 +11,10 @@ MONGO_DB_NAME = "video_metadata"
 MONGO_OBJECT_COLLECTION = "object_detection_results"
 
 # --- Data paths ---
-CLIP_FEATURES_DIR = "data/embeddings"
+CLIP_FEATURES_DIR = "data/clip_embeddings"
+CLIP_KEYFRAMES_DIR = "data/clip_keyframes"
+BEIT3_FEATURES_DIR = "data/beit3_embeddings"
+BEIT3_KEYFRAMES_DIR = "data/beit3_keyframes"
 KEYFRAMES_DIR = "data/keyframes"
 OBJECT_DETECTION_DIR = "data/objects"
 TRANSCRIPTS_DIR = "data/transcripts"
@@ -19,6 +23,9 @@ VIDEOS_DIR = "data/videos"
 # --- Model ---
 CLIP_MODEL_NAME = "ViT-H-14-378-quickgelu"
 CLIP_PRETRAINED = "dfn5b"
+BEIT3_MODEL_NAME = "beit3_large_patch16_384_retrieval"
+BEIT3_MODEL_PATH = "data/models/beit3_large_patch16_384_coco_retrieval.pth"
+BEIT3_TEXT_ENCODER_PATH = "data/models/beit3.spm"
 
 OBJECT_LABELS = [
     "Tortoise",

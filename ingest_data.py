@@ -355,7 +355,12 @@ def main():
     }
 
     kf_collection = setup_milvus_collection(
-        config.KEYFRAME_COLLECTION_NAME, kf_schema, "keyframe_vector", kf_index_params
+        config.CLIP_COLLECTION_NAME, kf_schema, "keyframe_vector", kf_index_params
+    )
+    ingest_keyframe_data(kf_collection)
+
+    kf_collection = setup_milvus_collection(
+        config.BEIT3_COLLECTION_NAME, kf_schema, "keyframe_vector", kf_index_params
     )
     ingest_keyframe_data(kf_collection)
 

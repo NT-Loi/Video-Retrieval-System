@@ -6,6 +6,9 @@ export const elements = {
   // NEW: Group Shots Toggle
   toggleGroupShotsBtn: document.getElementById("toggle-group-shots-btn"),
 
+  // Criteria Select
+  criteriaSelect: document.getElementById("criteria-select"),
+
   // Object Filter Inputs
   addObjectBtn: document.getElementById("add-object-btn"),
   objectList: document.getElementById("object-list"),

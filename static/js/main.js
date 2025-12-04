@@ -99,6 +99,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const formData = new FormData(elements.searchForm);
     const queryData = {
       description: formData.get("description"),
+      criteria: elements.criteriaSelect.value || "fused_score", // Default to "fused" nếu không chọn
       objects: getObjectQueries(),
       audio: formData.get("audio"),
     };
