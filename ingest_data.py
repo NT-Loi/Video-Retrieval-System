@@ -27,49 +27,7 @@ from utils.video_metadata import load_video_metadata
 BULK_CHUNK_SIZE = 2000
 logger = logging.getLogger(__name__)
 
-# --- Helper Functions ---
-
-
-def _load_keyframe_map(video_id: str):
-    maps_dir = Path(config.KEYFRAMES_DIR) / "maps"
-    map_file = maps_dir / f"{video_id}_map.csv"
-    if not map_file.exists():
-        return None
-
-    try:
-        df = pd.read_csv(map_file, usecols=["FrameID", "Seconds"])
-        df = df.dropna(subset=["FrameID", "Seconds"]).sort_values("Seconds")
-        if df.empty:
-            return None
-        frame_ids = df["FrameID"].to_numpy(dtype=np.int32)
-        seconds = df["Seconds"].to_numpy(dtype=np.float32)
-        return seconds, frame_ids
-    except Exception as exc:
-        logger.warning(f"Failed to load keyframe map for {video_id}: {exc}")
-        return None
-
-
-def _resolve_frames_from_map(mapping, target_seconds: np.ndarray):
-    if mapping is None or target_seconds.size == 0:
-        return None, None
-
-    seconds, frame_ids = mapping
-    if seconds.size == 0:
-        return None, None
-
-    positions = np.searchsorted(seconds, target_seconds, side="left")
-    right_idx = np.clip(positions, 0, len(seconds) - 1)
-    left_idx = np.clip(positions - 1, 0, len(seconds) - 1)
-
-    diff_left = np.abs(target_seconds - seconds[left_idx])
-    diff_right = np.abs(target_seconds - seconds[right_idx])
-    best_idx = np.where(diff_left <= diff_right, left_idx, right_idx)
-
-    return frame_ids[best_idx].astype(int), seconds[best_idx].astype(float)
-
-
 # --- Ingestion Functions ---
-
 
 def setup_milvus_collection(collection_name, schema, index_field, index_params):
     if utility.has_collection(collection_name):
@@ -86,9 +44,9 @@ def setup_milvus_collection(collection_name, schema, index_field, index_params):
     return collection
 
 
-def ingest_keyframe_data(collection: Collection):
+def ingest_keyframe_data(collection: Collection, feature_dir: str):
     logger.info("Ingesting keyframe data into Milvus...")
-    root = Path(config.CLIP_FEATURES_DIR)
+    root = Path(feature_dir)
 
     if not root.exists():
         logger.error(f"Embeddings directory not found: {root}")
@@ -215,16 +173,21 @@ def ingest_object_detection_data(mongo_collection, folder_path):
 
 
 def ingest_transcript_data(
-    es_client: Elasticsearch, folder_path: str, metadata_cache: dict
+    es_client: Elasticsearch, transcript_path: str, keyframe_path: str, metadata_cache: dict
 ) -> None:
     """
-    Ingest transcript data using FPS from metadata_cache.
+    Ingest transcript data using FPS from metadata_cache and compute keyframe timestamps automatically.
     """
     logger.info("Ingesting transcript data into Elasticsearch...")
+    transcripts_dir = Path(transcript_path)
+    keyframes_dir = Path(keyframe_path)
 
-    transcripts_dir = Path(folder_path)
     if not transcripts_dir.exists():
         logger.error(f"Transcript directory not found: {transcripts_dir}")
+        return
+
+    if not keyframes_dir.exists():
+        logger.error(f"Keyframe directory not found: {keyframes_dir}")
         return
 
     csv_files = sorted(transcripts_dir.glob("*.csv"))
@@ -233,15 +196,28 @@ def ingest_transcript_data(
         return
 
     total_docs = 0
-    map_cache: dict[str, tuple[np.ndarray, np.ndarray] | None] = {}
 
     for csv_path in csv_files:
         video_id = csv_path.stem
 
-        # --- Lấy FPS từ cache được truyền vào ---
-        # Fallback 25.0 nếu không tìm thấy trong cache
+        # Get FPS from metadata cache, fallback to 25.0 if not found
         fps = metadata_cache.get(video_id, 25.0)
-        # ----------------------------------------
+
+        # Get all keyframes for the video
+        video_keyframe_dir = keyframes_dir / video_id
+        if not video_keyframe_dir.exists():
+            logger.warning(f"No keyframes found for video {video_id}; skipping")
+            continue
+
+        keyframe_indices = sorted(
+            int(p.stem.split("_")[-1]) for p in video_keyframe_dir.glob("*.webp")
+        )
+        if not keyframe_indices:
+            logger.warning(f"No valid keyframe files found for video {video_id}; skipping")
+            continue
+
+        # Compute timestamps for each keyframe based on FPS
+        keyframe_timestamps = {idx: idx / fps for idx in keyframe_indices}
 
         try:
             df = pd.read_csv(csv_path)
@@ -272,34 +248,39 @@ def ingest_transcript_data(
         end_secs = np.where(np.isnan(end_secs), start_secs, end_secs)
         end_secs = np.maximum(end_secs, start_secs)
 
-        # Tính toán frame dựa trên FPS
-        start_frames = np.maximum(0, np.rint(start_secs * fps).astype(np.int32))
+        # Resolve keyframes based on start times
+        resolved_frames = []
+        for start_sec, end_sec in zip(start_secs, end_secs):
+            # Find the closest keyframe
+            closest_frame = min(
+                keyframe_timestamps.keys(),
+                key=lambda frame_idx: abs(keyframe_timestamps[frame_idx] - start_sec),
+            )
 
-        if video_id not in map_cache:
-            map_cache[video_id] = _load_keyframe_map(video_id)
-        frame_map = map_cache[video_id]
-
-        resolved_frames = start_frames
-        resolved_starts = start_secs
-
-        if frame_map:
-            resolved = _resolve_frames_from_map(frame_map, start_secs)
-            if resolved[0] is not None:
-                resolved_frames = resolved[0]
-                resolved_starts = resolved[1]
+            # Check if the keyframe lies within the audio timestamp range
+            keyframe_time = keyframe_timestamps[closest_frame]
+            if start_sec <= keyframe_time <= end_sec:
+                resolved_frames.append(closest_frame)
+            else:
+                # Skip this keyframe if it doesn't lie within the range
+                resolved_frames.append(None)
 
         texts = df["Text"].tolist()
         row_ids = df.index.to_numpy()
 
         actions = []
         for idx in range(len(texts)):
+            # Skip if no valid keyframe was resolved
+            if resolved_frames[idx] is None:
+                continue
+
             action = {
                 "_index": config.TRANSCRIPT_INDEX,
                 "_id": f"{video_id}_{resolved_frames[idx]}_{row_ids[idx]}",
                 "_source": {
                     "video_id": video_id,
                     "keyframe_index": int(resolved_frames[idx]),
-                    "start": float(round(resolved_starts[idx], 3)),
+                    "start": float(round(start_secs[idx], 3)),
                     "end": float(round(end_secs[idx], 3)),
                     "text": texts[idx],
                 },
@@ -329,11 +310,11 @@ def main():
     # 1. Load metadata (FPS) from root json file first
     metadata_cache = load_video_metadata("video_metadata.json")
 
-    # --- Elasticsearch Ingestion ---
+    # # --- Elasticsearch Ingestion ---
     es_client = get_elasticsearch_client()
     recreate_transcript_index(es_client)
     # Pass metadata to transcript ingestion
-    ingest_transcript_data(es_client, config.TRANSCRIPTS_DIR, metadata_cache)
+    ingest_transcript_data(es_client, config.TRANSCRIPTS_DIR, config.KEYFRAMES_DIR, metadata_cache)
 
     # --- Milvus Ingestion ---
     connections.connect("default", host=config.MILVUS_HOST, port=config.MILVUS_PORT)
@@ -357,12 +338,12 @@ def main():
     kf_collection = setup_milvus_collection(
         config.CLIP_COLLECTION_NAME, kf_schema, "keyframe_vector", kf_index_params
     )
-    ingest_keyframe_data(kf_collection)
+    ingest_keyframe_data(kf_collection, config.CLIP_FEATURES_DIR)
 
     kf_collection = setup_milvus_collection(
         config.BEIT3_COLLECTION_NAME, kf_schema, "keyframe_vector", kf_index_params
     )
-    ingest_keyframe_data(kf_collection)
+    ingest_keyframe_data(kf_collection, config.BEIT3_FEATURES_DIR)
 
     # --- MongoDB Ingestion ---
     mongo_client = MongoClient(config.MONGO_URI)
