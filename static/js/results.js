@@ -128,7 +128,12 @@ function displayGroupedResults(results) {
 
   // Update max_score by multiple length groups[key].items.length
   Object.values(groups).forEach((group) => {
-    group.max_score *= group.items.length;
+    const threshold = 0.4;
+    if (group.max_score > threshold) {
+      group.max_score *= group.items.length;
+    } else {
+      group.max_score = 0;
+    }
   });
   
   // 2. Sorting by max_score
