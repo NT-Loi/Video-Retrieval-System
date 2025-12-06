@@ -344,6 +344,14 @@ class VideoRetrievalSystem:
         # for each identifier that survived the intersection process.
         final_results = [lookup_map[id_tuple] for id_tuple in intersecting_ids]
         
+        # Sort final results by fused_score if available
+        if final_results:
+            if "fused_score" in final_results[0]:
+                final_results.sort(key=lambda x: x.get("fused_score", 0), reverse=True)
+            elif "clip_score" in final_results[0]:
+                final_results.sort(key=lambda x: x.get("clip_score", 0), reverse=True)
+            else: # beit3_score in final_results[0]:
+                final_results.sort(key=lambda x: x.get("beit3_score", 0), reverse=True)
         return final_results[:max_results]
 
 

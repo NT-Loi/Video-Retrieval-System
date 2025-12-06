@@ -96,7 +96,7 @@ def search_api():
             result_sets.append(transcript_results)
 
         # Giao các tập kết quả
-        results = search_system.intersect(result_sets)
+        results = search_system.intersect(result_sets, max_results=1000)
 
         for item in results:
             vid = item.get("video_id")
