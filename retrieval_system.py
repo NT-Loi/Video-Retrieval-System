@@ -362,4 +362,3 @@ if __name__ == "__main__":
         query1, projection={"_id": 1, "video_id": 1, "keyframe_id": 1}
     )
     print("Filter take: ", time.time() - start)
-
