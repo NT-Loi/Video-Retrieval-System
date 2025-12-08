@@ -257,13 +257,14 @@ def ingest_transcript_data(
                 key=lambda frame_idx: abs(keyframe_timestamps[frame_idx] - start_sec),
             )
 
-            # Check if the keyframe lies within the audio timestamp range
-            keyframe_time = keyframe_timestamps[closest_frame]
-            if start_sec <= keyframe_time <= end_sec:
-                resolved_frames.append(closest_frame)
-            else:
-                # Skip this keyframe if it doesn't lie within the range
-                resolved_frames.append(None)
+            # # Check if the keyframe lies within the audio timestamp range
+            # keyframe_time = keyframe_timestamps[closest_frame]
+            # if start_sec <= keyframe_time <= end_sec:
+            #     resolved_frames.append(closest_frame)
+            # else:
+            #     # Skip this keyframe if it doesn't lie within the range
+            #     resolved_frames.append(None)
+            resolved_frames.append(closest_frame)
 
         texts = df["Text"].tolist()
         row_ids = df.index.to_numpy()
