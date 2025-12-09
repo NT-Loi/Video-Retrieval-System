@@ -46,7 +46,8 @@ class VideoRetrievalSystem:
         logger.info("Successfully connected to Elasticsearch.")
 
         # Initialize the text encoder
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        # self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.device = "cpu"
         self.clip_encoder = CLIPTextEncoder(device=self.device)
         self.beit3_encoder = BEIT3TextEncoder(device=self.device)
 

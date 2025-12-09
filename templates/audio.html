@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audio Automation Bot</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <style>
+    /* CSS riêng cho trang này để nhận biết */
+    body {
+      background-color: #eef2f5;
+    }
+
+    .bot-status-panel {
+      background: #222;
+      color: #0f0;
+      padding: 10px;
+      font-family: monospace;
+      font-size: 13px;
+      margin-bottom: 10px;
+      border-radius: 4px;
+    }
+
+    .recording-indicator {
+      color: red;
+      animation: blink 1s infinite;
+      display: none;
+    }
+
+    @keyframes blink {
+      50% {
+        opacity: 0;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="top-control-panel">
+    <div class="left-panel">
+      <div id="bot-status" class="bot-status-panel">
+        [SYSTEM] Bot ready. Please Login to start.
+      </div>
+
+      <div class="compact-form">
+        <div class="search-row">
+          <strong style="margin-right: 10px;">TRANSCRIPT:</strong>
+          <input type="text" id="audio-transcript-display" placeholder="Waiting for whisper..." readonly
+            style="flex-grow: 1; background: #fff;">
+          <span id="rec-icon" class="recording-indicator">● REC</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="right-panel">
+      <button id="audio-login-btn"
+        style="padding: 8px 15px; background: #e76f51; color: white; border: none; border-radius: 4px; cursor: pointer;">
+        Login DRES
+      </button>
+    </div>
+  </div>
+
+  <main>
+    <div id="results-container"></div>
+  </main>
+
+  <div id="video-modal" class="modal-overlay hidden">
+    <div class="modal-content-wrapper">
+      <div class="modal-player-section">
+        <button id="close-modal-btn" class="close-btn">&times;</button>
+        <h3 id="modal-video-title">Loading...</h3>
+        <div class="video-player-wrapper">
+          <video id="modal-video-player" width="100%" controls autoplay></video>
+        </div>
+      </div>
+      <div class="modal-sidebar">
+        <h4>Keyframes in Shot</h4>
+        <div id="modal-shot-list" class="shot-list-container"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="evaluation-modal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 500px;">
+      <h3>Select Evaluation</h3>
+      <div id="evaluation-list" style="margin-bottom: 20px;"></div>
+      <button id="cancel-eval-btn">Cancel</button>
+    </div>
+  </div>
+
+  <script type="module" src="{{ url_for('static', filename='js/audio.js') }}"></script>
+</body>
+
+</html>
