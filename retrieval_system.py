@@ -72,6 +72,9 @@ class VideoRetrievalSystem:
         )
 
         keyframe_scores = []
+        max_distance = max(hit.distance for hit in search_results[0])  # For normalization
+        min_distance = min(hit.distance for hit in search_results[0])
+        denominator = max_distance - min_distance if max_distance != min_distance else 1.0
         if search_results:
             for hit in search_results[0]:
                 keyframe_scores.append(
@@ -79,6 +82,8 @@ class VideoRetrievalSystem:
                         "video_id": hit.entity.get("video_id"),
                         "keyframe_index": hit.entity.get("keyframe_index"),
                         "clip_score": hit.distance,
+                        # Min-Max normalize later in fused search
+                        "normalized_clip_score": float((hit.distance - min_distance) / denominator),
                     }
                 )
 
@@ -106,6 +111,9 @@ class VideoRetrievalSystem:
             output_fields=["video_id", "keyframe_index"],
         )
 
+        max_distance = max(hit.distance for hit in search_results[0])  # For normalization
+        min_distance = min(hit.distance for hit in search_results[0])
+        denominator = max_distance - min_distance if max_distance != min_distance else 1.0
         keyframe_scores = []
         if search_results:
             for hit in search_results[0]:
@@ -114,6 +122,7 @@ class VideoRetrievalSystem:
                         "video_id": hit.entity.get("video_id"),
                         "keyframe_index": hit.entity.get("keyframe_index"),
                         "beit3_score": hit.distance,
+                        "normalized_beit3_score": float((hit.distance - min_distance) / denominator),
                     }
                 )
 
@@ -143,6 +152,7 @@ class VideoRetrievalSystem:
                 "video_id": item["video_id"],
                 "keyframe_index": item["keyframe_index"],
                 "clip_score": item["clip_score"],
+                "normalized_clip_score": item["normalized_clip_score"],
             })
 
         # Add BEiT3 scores
@@ -153,6 +163,7 @@ class VideoRetrievalSystem:
                 "video_id": item["video_id"],
                 "keyframe_index": item["keyframe_index"],
                 "beit3_score": item["beit3_score"],
+                "normalized_beit3_score": item["normalized_beit3_score"],
             })
 
         # --- Compute weighted score ---
@@ -160,8 +171,8 @@ class VideoRetrievalSystem:
         w_clip = 0.5
         w_beit3 = 0.5
         for (_, _), item in merged.items():
-            clip_s = item.get("clip_score", 0)
-            beit_s = item.get("beit3_score", 0)
+            clip_s = item.get("normalized_clip_score", 0)
+            beit_s = item.get("normalized_beit3_score", 0)
             item["fused_score"] = w_clip * clip_s + w_beit3 * beit_s
             results.append(item)
 
