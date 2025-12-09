@@ -317,49 +317,49 @@ def main():
     # Pass metadata to transcript ingestion
     ingest_transcript_data(es_client, config.TRANSCRIPTS_DIR, config.KEYFRAMES_DIR, metadata_cache)
 
-    # --- Milvus Ingestion ---
-    connections.connect("default", host=config.MILVUS_HOST, port=config.MILVUS_PORT)
-    kf_fields = [
-        FieldSchema(name="pk", dtype=DataType.INT64, is_primary=True, auto_id=True),
-        FieldSchema(name="video_id", dtype=DataType.VARCHAR, max_length=20),
-        FieldSchema(name="keyframe_index", dtype=DataType.INT64),
-        FieldSchema(
-            name="keyframe_vector",
-            dtype=DataType.FLOAT_VECTOR,
-            dim=config.VECTOR_DIMENSION,
-        ),
-    ]
-    kf_schema = CollectionSchema(kf_fields, "Keyframe vectors")
-    kf_index_params = {
-        "metric_type": "COSINE",
-        "index_type": "IVF_FLAT",
-        "params": {"nlist": 128},
-    }
+    # # --- Milvus Ingestion ---
+    # connections.connect("default", host=config.MILVUS_HOST, port=config.MILVUS_PORT)
+    # kf_fields = [
+    #     FieldSchema(name="pk", dtype=DataType.INT64, is_primary=True, auto_id=True),
+    #     FieldSchema(name="video_id", dtype=DataType.VARCHAR, max_length=20),
+    #     FieldSchema(name="keyframe_index", dtype=DataType.INT64),
+    #     FieldSchema(
+    #         name="keyframe_vector",
+    #         dtype=DataType.FLOAT_VECTOR,
+    #         dim=config.VECTOR_DIMENSION,
+    #     ),
+    # ]
+    # kf_schema = CollectionSchema(kf_fields, "Keyframe vectors")
+    # kf_index_params = {
+    #     "metric_type": "COSINE",
+    #     "index_type": "IVF_FLAT",
+    #     "params": {"nlist": 128},
+    # }
 
-    kf_collection = setup_milvus_collection(
-        config.CLIP_COLLECTION_NAME, kf_schema, "keyframe_vector", kf_index_params
-    )
-    ingest_keyframe_data(kf_collection, config.CLIP_FEATURES_DIR)
+    # kf_collection = setup_milvus_collection(
+    #     config.CLIP_COLLECTION_NAME, kf_schema, "keyframe_vector", kf_index_params
+    # )
+    # ingest_keyframe_data(kf_collection, config.CLIP_FEATURES_DIR)
 
-    kf_collection = setup_milvus_collection(
-        config.BEIT3_COLLECTION_NAME, kf_schema, "keyframe_vector", kf_index_params
-    )
-    ingest_keyframe_data(kf_collection, config.BEIT3_FEATURES_DIR)
+    # kf_collection = setup_milvus_collection(
+    #     config.BEIT3_COLLECTION_NAME, kf_schema, "keyframe_vector", kf_index_params
+    # )
+    # ingest_keyframe_data(kf_collection, config.BEIT3_FEATURES_DIR)
 
-    # --- MongoDB Ingestion ---
-    mongo_client = MongoClient(config.MONGO_URI)
-    object_collection = setup_mongodb_collection(
-        mongo_client,
-        config.MONGO_DB_NAME,
-        config.MONGO_OBJECT_COLLECTION,
-        drop_existing=True,
-    )
-    ingest_object_detection_data(
-        object_collection, folder_path=config.OBJECT_DETECTION_DIR
-    )
+    # # --- MongoDB Ingestion ---
+    # mongo_client = MongoClient(config.MONGO_URI)
+    # object_collection = setup_mongodb_collection(
+    #     mongo_client,
+    #     config.MONGO_DB_NAME,
+    #     config.MONGO_OBJECT_COLLECTION,
+    #     drop_existing=True,
+    # )
+    # ingest_object_detection_data(
+    #     object_collection, folder_path=config.OBJECT_DETECTION_DIR
+    # )
 
-    logger.info("--- DATA INGESTION COMPLETE ---")
-    mongo_client.close()
+    # logger.info("--- DATA INGESTION COMPLETE ---")
+    # mongo_client.close()
 
 
 if __name__ == "__main__":

@@ -65,20 +65,20 @@ def search_api():
     try:
         description = query_data.get("description", "")
         result_sets = []
-
+        max_results = 200
         # 1. Search by criteria
         if description:
             if query_data.get("criteria") == "fused_score":
                 results = search_system.fused_search(
-                    description, max_results=1000
+                    description, max_results=max_results
                 )
             elif query_data.get("criteria") == "clip_score":
                 results = search_system.clip_search(
-                    description, max_results=1000
+                    description, max_results=max_results
                 )
             else:
                 results = search_system.beit3_search(
-                    description, max_results=1000
+                    description, max_results=max_results
                 )
             result_sets.append(results)
 
@@ -92,11 +92,11 @@ def search_api():
         # 3. Search Transcript
         transcript_text = query_data.get("audio")
         if transcript_text:
-            transcript_results = search_system.transcript_search(transcript_text, max_results=1000)
+            transcript_results = search_system.transcript_search(transcript_text, max_results=max_results)
             result_sets.append(transcript_results)
 
         # Giao các tập kết quả
-        results = search_system.intersect(result_sets, max_results=1000)
+        results = search_system.intersect(result_sets, max_results=max_results)
 
         for item in results:
             vid = item.get("video_id")
@@ -116,7 +116,7 @@ def search_api():
                 item["shot_end_frame"] = k_idx
 
         logger.info(f"Search completed. Number of results: {len(results)}")
-        return jsonify(results[:1000])
+        return jsonify(results)
     except Exception as e:
         logger.error(f"An error occurred during search: {e}", exc_info=True)
         return jsonify({"error": "An internal error occurred during search."}), 500

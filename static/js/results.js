@@ -103,7 +103,7 @@ function displayGroupedResults(results) {
   // 1. Grouping
   const groups = {}; // key: "video_id|start|end"
   const criteria = elements.criteriaSelect.value || "fused_score";
-
+  const threshold = 0.3;
   results.forEach((item) => {
     const vId = item.video_id;
     const sStart = item.shot_start_frame;
@@ -116,29 +116,26 @@ function displayGroupedResults(results) {
         start_frame: sStart,
         end_frame: sEnd,
         fps: item.fps,
-        max_score: -1,
+        shot_score: 0,
         items: [],
+        num_valid_items: 0,
       };
     }    
     groups[key].items.push(item);
-    if (item[criteria] > groups[key].max_score) {
-      groups[key].max_score = item[criteria];
+    if (item[criteria] > threshold) {
+      groups[key].shot_score += item[criteria];
+      groups[key].num_valid_items += 1;
     }
   });
 
-  // Update max_score by multiple length groups[key].items.length
-  Object.values(groups).forEach((group) => {
-    const threshold = 0.4;
-    if (group.max_score > threshold) {
-      group.max_score *= group.items.length;
-    } else {
-      group.max_score = 0;
-    }
-  });
+  // Update shot_score by multiple length groups[key].items.length
+  // Object.values(groups).forEach((group) => {
+  //   group.shot_score /= group.num_valid_items || 1;
+  // });
   
-  // 2. Sorting by max_score
+  // 2. Sorting by shot_score
   const sortedGroups = Object.values(groups).sort(
-    (a, b) => b.max_score - a.max_score,
+    (a, b) => b.shot_score - a.shot_score,
   );
 
   // 3. Rendering
@@ -173,8 +170,8 @@ function displayGroupedResults(results) {
                 <h3>${group.video_id}</h3>
                 <div class="shot-stats">
                     Shot: ${group.start_frame} - ${group.end_frame}<br>
-                    Top Score: ${group.max_score.toFixed(4)}<br>
-                    Matches: ${group.items.length}
+                    Top Score: ${group.shot_score.toFixed(4)}<br>
+                    Matches: ${group.num_valid_items}
                 </div>
             </div>
         `;
