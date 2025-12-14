@@ -13,28 +13,22 @@ export function initVideoModal() {
 }
 
 function highlightActiveCard(videoId, shotData, specificKeyframe) {
-  // Xóa highlight cũ
   document.querySelectorAll(".active-viewed-card").forEach((el) => {
     el.classList.remove("active-viewed-card");
   });
-
   let selector = "";
-
   if (shotData) {
-    // Chế độ Group Shot: Giữ nguyên logic cũ (theo shot key)
+    // Group Shot Mode
     const shotKey = `${videoId}|${shotData.shotStart}|${shotData.shotEnd}`;
     selector = `.shot-group-card[data-shot-key="${shotKey}"]`;
   } else {
-    // Chế độ lẻ: Tìm chính xác theo videoId VÀ keyframeIndex
-    // Lưu ý: attribute trong HTML là data-keyframe-index (kebab-case)
+    // Flat Mode
     if (specificKeyframe !== undefined && specificKeyframe !== null) {
       selector = `.result-item[data-video-id="${videoId}"][data-keyframe-index="${specificKeyframe}"]`;
     } else {
-      // Fallback nếu không truyền keyframe (dù hiếm khi xảy ra nếu gọi đúng)
       selector = `.result-item[data-video-id="${videoId}"]`;
     }
   }
-
   const activeCard = document.querySelector(selector);
   if (activeCard) {
     activeCard.classList.add("active-viewed-card");
@@ -48,11 +42,10 @@ export function openModal(
   fps,
   shotData = null,
   specificKeyframe = null,
+  sequenceData = null,
 ) {
   closeModal();
   currentOpenVideoId = videoId;
-
-  // Truyền specificKeyframe vào hàm highlight
   highlightActiveCard(videoId, shotData, specificKeyframe);
 
   elements.modalVideoTitle.textContent = `Playing: ${videoId} (FPS: ${fps})`;
@@ -61,16 +54,13 @@ export function openModal(
   // --- 1. SETUP HLS PLAYER ---
   const hlsUrl = `/hls/${videoId}/playlist.m3u8`;
   let mainHls = null;
-
   if (Hls.isSupported()) {
     mainHls = new Hls({ debug: false, enableWorker: true });
     mainHls.loadSource(hlsUrl);
     mainHls.attachMedia(elements.modalVideoPlayer);
     mainHls.on(Hls.Events.MANIFEST_PARSED, function () {
       elements.modalVideoPlayer.currentTime = startTime;
-      elements.modalVideoPlayer
-        .play()
-        .catch((e) => console.warn("Auto-play blocked:", e));
+      elements.modalVideoPlayer.play().catch((e) => console.warn(e));
     });
   } else if (
     elements.modalVideoPlayer.canPlayType("application/vnd.apple.mpegurl")
@@ -88,22 +78,23 @@ export function openModal(
     elements.modalVideoPlayer.src = `/videos/${videoId}#t=${startTime}`;
   }
 
-  // --- 2. SETUP TIMELINE UI ---
+  // --- 2. SETUP TIMELINE UI (Full features) ---
   const videoWrapper = elements.modalVideoPlayer.parentElement;
-  // Đảm bảo position relative để con (timeline) tuyệt đối theo nó
   if (getComputedStyle(videoWrapper).position === "static") {
     videoWrapper.style.position = "relative";
   }
 
-  // Xóa timeline cũ nếu còn sót
+  // Clear old timeline
   const oldTimeline = videoWrapper.querySelector(".video-timeline");
   if (oldTimeline) oldTimeline.remove();
+  // Clear old preview video if any
+  const oldPreview = videoWrapper.querySelector("video[data-type='preview']");
+  if (oldPreview) oldPreview.remove();
 
   const timelineBar = document.createElement("div");
   timelineBar.className = "video-timeline";
   videoWrapper.appendChild(timelineBar);
 
-  // Thanh Progress (Màu xanh)
   const progressFill = document.createElement("div");
   Object.assign(progressFill.style, {
     position: "absolute",
@@ -111,14 +102,13 @@ export function openModal(
     top: "0",
     bottom: "0",
     width: "0%",
-    background: "#1db954", // Màu xanh
-    borderRadius: "2px",
+    background: "#1db954",
     pointerEvents: "none",
     zIndex: "10",
   });
   timelineBar.appendChild(progressFill);
 
-  // --- 3. SETUP RED SHOT BAR ---
+  // --- 3. RED SHOT BAR (KHÔI PHỤC) ---
   if (shotData) {
     const addRedBar = () => {
       const duration = elements.modalVideoPlayer.duration;
@@ -126,7 +116,6 @@ export function openModal(
 
       const startSec = shotData.shotStart / fps;
       const endSec = shotData.shotEnd / fps;
-
       const leftPct = (startSec / duration) * 100;
       const widthPct = ((endSec - startSec) / duration) * 100;
 
@@ -138,11 +127,10 @@ export function openModal(
         bottom: "0",
         left: `${leftPct}%`,
         width: `${widthPct}%`,
-        backgroundColor: "rgba(220, 53, 69, 0.9)", // Màu đỏ đậm
+        backgroundColor: "rgba(220, 53, 69, 0.8)",
         pointerEvents: "none",
-        zIndex: "20", // CAO HƠN GREEN (10) ĐỂ KHÔNG BỊ ĐÈ
+        zIndex: "5",
       });
-
       timelineBar.appendChild(redBar);
     };
 
@@ -155,17 +143,16 @@ export function openModal(
     }
   }
 
-  // --- 4. PREVIEW HOVER ---
+  // --- 4. TIMELINE PREVIEW (KHÔI PHỤC) ---
   const timelinePreview = document.createElement("div");
   timelinePreview.className = "timeline-preview";
-  timelinePreview.innerHTML = `
-        <img src="" alt="Preview" style="display:none;">
-        <div class="time-label">0:00</div>
-    `;
+  timelinePreview.innerHTML = `<img src="" alt="Preview" style="display:none;"><div class="time-label">0:00</div>`;
   timelineBar.appendChild(timelinePreview);
 
+  // Hidden video for preview generation
   const previewVideo = document.createElement("video");
   previewVideo.muted = true;
+  previewVideo.setAttribute("data-type", "preview");
   previewVideo.style.display = "none";
   videoWrapper.appendChild(previewVideo);
 
@@ -178,25 +165,121 @@ export function openModal(
     previewVideo.src = hlsUrl;
   }
 
-  // --- 5. SIDEBAR PLAYLIST ---
+  // Hover logic
+  const previewImg = timelinePreview.querySelector("img");
+  const timeLabel = timelinePreview.querySelector(".time-label");
+  const previewCanvas = document.createElement("canvas");
+  const previewCtx = previewCanvas.getContext("2d");
+  let hoverTargetTime = null;
+  let hoverScheduled = false;
+
+  const runHoverPreview = () => {
+    hoverScheduled = false;
+    if (hoverTargetTime === null || !elements.modalVideoPlayer.duration) return;
+
+    // Nếu HLS, cần seek
+    previewVideo.currentTime = hoverTargetTime;
+
+    // Ở đây ta dùng sự kiện seeked để capture frame
+    const onSeeked = () => {
+      if (Math.abs(previewVideo.currentTime - hoverTargetTime) > 1.0) return; // Quá xa thì bỏ
+
+      const vw = previewVideo.videoWidth || 320;
+      const vh = previewVideo.videoHeight || 180;
+      if (vw && vh) {
+        previewCanvas.width = vw;
+        previewCanvas.height = vh;
+        try {
+          previewCtx.drawImage(previewVideo, 0, 0, vw, vh);
+          previewImg.src = previewCanvas.toDataURL("image/jpeg", 0.5);
+          previewImg.style.display = "block";
+        } catch (e) {}
+      }
+    };
+    previewVideo.addEventListener("seeked", onSeeked, { once: true });
+  };
+
+  timelineBar.addEventListener("mousemove", (e) => {
+    if (!elements.modalVideoPlayer.duration) return;
+    const rect = timelineBar.getBoundingClientRect();
+    const percent = Math.max(
+      0,
+      Math.min(1, (e.clientX - rect.left) / rect.width),
+    );
+    const hoverTime = percent * elements.modalVideoPlayer.duration;
+
+    timelinePreview.style.display = "block";
+    // Position
+    let left = percent * rect.width - 80; // 80 = half width of 160px
+    left = Math.max(0, Math.min(left, rect.width - 160));
+    timelinePreview.style.left = `${percent * 100}%`;
+    timelinePreview.style.transform = `translateX(-50%)`;
+
+    // Time Label
+    const m = Math.floor(hoverTime / 60);
+    const s = Math.floor(hoverTime % 60);
+    timeLabel.textContent = `${m}:${s.toString().padStart(2, "0")}`;
+
+    hoverTargetTime = hoverTime;
+    if (!hoverScheduled) {
+      hoverScheduled = true;
+      setTimeout(runHoverPreview, 100); // Debounce
+    }
+  });
+
+  timelineBar.addEventListener("mouseleave", () => {
+    timelinePreview.style.display = "none";
+    hoverTargetTime = null;
+  });
+
+  // --- 5. SIDEBAR PLAYLIST (NEW LOGIC + OLD LOGIC) ---
   if (elements.modalShotList) {
     elements.modalShotList.innerHTML = "";
-    if (shotData && shotData.items && shotData.items.length > 0) {
+
+    // Ưu tiên 1: Sequence
+    if (sequenceData && sequenceData.length > 0) {
+      const header = document.createElement("h5");
+      header.textContent = "Sequence Events";
+      header.style.padding = "10px";
+      header.style.margin = "0";
+      header.style.background = "#eef";
+      elements.modalShotList.appendChild(header);
+
+      sequenceData.forEach((item) => {
+        const itemDiv = document.createElement("div");
+        itemDiv.className = "sidebar-keyframe-item";
+        if (item.keyframe_index === specificKeyframe) {
+          itemDiv.classList.add("active"); // CSS active style
+          itemDiv.style.border = "2px solid #0077b6";
+        }
+
+        itemDiv.innerHTML = `
+                <img src="/keyframes/${item.video_id}/keyframe_${item.keyframe_index}.webp" loading="lazy">
+                <div class="sidebar-info">
+                    <strong>Event ${item.query_index + 1}</strong>
+                    <span>Frame: ${item.keyframe_index}</span>
+                </div>
+            `;
+        itemDiv.addEventListener("click", () => {
+          elements.modalVideoPlayer.currentTime = item.keyframe_index / fps;
+          elements.modalVideoPlayer.play();
+        });
+        elements.modalShotList.appendChild(itemDiv);
+      });
+    }
+    // Ưu tiên 2: Shot List (Group Shot)
+    else if (shotData && shotData.items) {
       const sortedItems = [...shotData.items].sort(
         (a, b) => a.keyframe_index - b.keyframe_index,
       );
-
       sortedItems.forEach((kf) => {
-        const criteria = elements.criteriaSelect.value || "fused_score";
         const itemDiv = document.createElement("div");
         itemDiv.className = "sidebar-keyframe-item";
         itemDiv.innerHTML = `
-            <img src="/keyframes/${kf.video_id}/keyframe_${
-              kf.keyframe_index
-            }.webp" loading="lazy">
+            <img src="/keyframes/${kf.video_id}/keyframe_${kf.keyframe_index}.webp" loading="lazy">
             <div class="sidebar-info">
                 <strong>Frame: ${kf.keyframe_index}</strong>
-                <span>Score: ${kf[criteria].toFixed(4)}</span>
+                <span>Score: ${(kf.fused_score || 0).toFixed(3)}</span>
             </div>
           `;
         itemDiv.addEventListener("click", () => {
@@ -207,16 +290,14 @@ export function openModal(
       });
     } else {
       elements.modalShotList.innerHTML =
-        "<p style='padding:10px; color:#666; font-size:13px;'>No specific shot keyframes.</p>";
+        "<div style='padding:10px'>No frames list available.</div>";
     }
   }
 
-  // --- 6. FRAME CONTROLS (Submit & Nav) ---
-  // Xóa controls cũ để tránh trùng lặp
+  // --- 6. CONTROLS (NEW) ---
   const oldControls =
     elements.modalPlayerSection.querySelector(".frame-controls");
   if (oldControls) oldControls.remove();
-
   const frameControls = document.createElement("div");
   frameControls.className = "frame-controls";
   frameControls.innerHTML = `
@@ -230,8 +311,6 @@ export function openModal(
             <button class="frame-btn" id="next-frame-btn">+</button>
         </div>
         <div style="width: 80px;"></div>`;
-
-  // Append vào phần Player Section (bên trái), dưới cùng
   elements.modalPlayerSection.appendChild(frameControls);
 
   // --- 7. EVENT LISTENERS ---
@@ -242,75 +321,27 @@ export function openModal(
   const prevBtn = frameControls.querySelector("#prev-frame-btn");
   const nextBtn = frameControls.querySelector("#next-frame-btn");
 
-  // Logic Hover Timeline
-  const previewImg = timelinePreview.querySelector("img");
-  const timeLabel = timelinePreview.querySelector(".time-label");
-  const previewCanvas = document.createElement("canvas");
-  const previewCtx = previewCanvas.getContext("2d");
-  let hoverTargetTime = null;
-  let hoverScheduled = false;
-
-  const runHoverPreview = () => {
-    hoverScheduled = false;
-    if (hoverTargetTime === null || !elements.modalVideoPlayer.duration) return;
-    const targetTime = hoverTargetTime;
-    hoverTargetTime = null;
-
-    const onSeeked = () => {
-      if (Math.abs(previewVideo.currentTime - targetTime) > 0.5) return;
-      const vw = previewVideo.videoWidth || previewVideo.clientWidth;
-      const vh = previewVideo.videoHeight || previewVideo.clientHeight;
-      if (!vw || !vh) return;
-      previewCanvas.width = vw;
-      previewCanvas.height = vh;
-      try {
-        previewCtx.drawImage(previewVideo, 0, 0, vw, vh);
-        previewImg.src = previewCanvas.toDataURL("image/jpeg", 0.6);
-        previewImg.style.display = "block";
-      } catch (e) {
-        previewImg.style.display = "none";
-      }
-    };
-    previewVideo.removeEventListener("seeked", onSeeked);
-    previewVideo.addEventListener("seeked", onSeeked, { once: true });
-    previewVideo.currentTime = targetTime;
+  // Progress Update
+  const updateProgress = () => {
+    if (!elements.modalVideoPlayer.duration) return;
+    const p =
+      (elements.modalVideoPlayer.currentTime /
+        elements.modalVideoPlayer.duration) *
+      100;
+    progressFill.style.width = `${p}%`;
   };
-
-  timelineBar.addEventListener("mousemove", (e) => {
+  const updateFrameInfo = () => {
     if (!elements.modalVideoPlayer.duration) return;
-    const rect = timelineBar.getBoundingClientRect();
-    const percent = Math.max(
-      0,
-      Math.min(1, (e.clientX - rect.left) / rect.width),
-    );
-    const hoverTime = percent * elements.modalVideoPlayer.duration;
+    const cf = Math.round(elements.modalVideoPlayer.currentTime * frameRate);
+    if (document.activeElement !== frameInput) frameInput.value = cf;
+    totalFramesSpan.textContent = `/ ${Math.floor(elements.modalVideoPlayer.duration * frameRate)}`;
+  };
+  elements.modalVideoPlayer.addEventListener("timeupdate", updateProgress);
+  elements.modalVideoPlayer.addEventListener("timeupdate", updateFrameInfo);
+  elements.modalVideoPlayer.addEventListener("loadedmetadata", updateFrameInfo);
 
-    timelinePreview.style.display = "block";
-    let left = percent * rect.width - timelinePreview.offsetWidth / 2;
-    left = Math.max(
-      0,
-      Math.min(left, rect.width - timelinePreview.offsetWidth),
-    );
-    timelinePreview.style.left = `${percent * 100}%`;
-
-    const m = Math.floor(hoverTime / 60);
-    const s = Math.floor(hoverTime % 60);
-    timeLabel.textContent = `${m}:${s.toString().padStart(2, "0")}`;
-
-    hoverTargetTime = hoverTime;
-    if (!hoverScheduled) {
-      hoverScheduled = true;
-      setTimeout(runHoverPreview, 50);
-    }
-  });
-
-  timelineBar.addEventListener("mouseleave", () => {
-    timelinePreview.style.display = "none";
-    hoverTargetTime = null;
-  });
-
+  // Timeline Click
   timelineBar.addEventListener("click", (e) => {
-    if (!elements.modalVideoPlayer.duration) return;
     const rect = timelineBar.getBoundingClientRect();
     const percent = Math.max(
       0,
@@ -320,60 +351,39 @@ export function openModal(
       percent * elements.modalVideoPlayer.duration;
   });
 
-  // Logic Progress Update
-  const updateProgress = () => {
-    if (!elements.modalVideoPlayer.duration) return;
-    const p =
-      (elements.modalVideoPlayer.currentTime /
-        elements.modalVideoPlayer.duration) *
-      100;
-    progressFill.style.width = `${p}%`;
-  };
-  elements.modalVideoPlayer.addEventListener("timeupdate", updateProgress);
-
-  // Logic Frame Info Update
-  const updateFrameInfo = () => {
-    if (!elements.modalVideoPlayer.duration) return;
-    const cf = Math.round(elements.modalVideoPlayer.currentTime * frameRate);
-    if (document.activeElement !== frameInput) frameInput.value = cf;
-    totalFramesSpan.textContent = `/ ${Math.floor(
-      elements.modalVideoPlayer.duration * frameRate,
-    )}`;
-  };
-  elements.modalVideoPlayer.addEventListener("timeupdate", updateFrameInfo);
-  elements.modalVideoPlayer.addEventListener("loadedmetadata", updateFrameInfo);
-
-  // Logic Submit
+  // Submit Logic (Pause Video)
   dynSubmitBtn.addEventListener("click", async () => {
+    elements.modalVideoPlayer.pause(); // PAUSE
     const sId = localStorage.getItem("sessionId");
     const eId = localStorage.getItem("evaluationId");
     if (!sId || !eId) {
       alert("Please LOGIN first!");
       return;
     }
+
     const tMs = Math.round(elements.modalVideoPlayer.currentTime * 1000);
     const cf = Math.round(elements.modalVideoPlayer.currentTime * frameRate);
     if (confirm(`Submit frame ${cf} (${tMs}ms) of ${videoId}?`)) {
       try {
         const res = await submitResultAPI(sId, eId, videoId, tMs);
-        alert(`Success! ${JSON.stringify(res.remote_response)}`);
+        alert(`Success!`);
       } catch (err) {
         alert(`Failed: ${err.message}`);
       }
     }
   });
 
-  // Logic Navigation
+  // Nav Logic
   const stepFrame = (dir) => {
     elements.modalVideoPlayer.pause();
     const cf = Math.round(elements.modalVideoPlayer.currentTime * frameRate);
-    let nextTime = (cf + dir) / frameRate + 0.0001;
-    nextTime = Math.max(0, nextTime);
-    elements.modalVideoPlayer.currentTime = nextTime;
+    elements.modalVideoPlayer.currentTime = Math.max(
+      0,
+      (cf + dir) / frameRate + 0.0001,
+    );
   };
   prevBtn.addEventListener("click", () => stepFrame(-1));
   nextBtn.addEventListener("click", () => stepFrame(1));
-
   frameInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -386,23 +396,23 @@ export function openModal(
     }
   });
 
-  // Keyboard Shortcuts
+  // Global Space Key
   const handleKey = (e) => {
     if (elements.modalOverlay.classList.contains("hidden")) return;
-    if (document.activeElement === frameInput) return;
-    if (e.key === "ArrowLeft") stepFrame(-1);
-    if (e.key === "ArrowRight") stepFrame(1);
-    if (e.key === " ") {
+    if (e.target.tagName === "INPUT") return;
+    if (e.code === "Space") {
       e.preventDefault();
       elements.modalVideoPlayer.paused
         ? elements.modalVideoPlayer.play()
         : elements.modalVideoPlayer.pause();
     }
+    if (e.key === "ArrowLeft") stepFrame(-1);
+    if (e.key === "ArrowRight") stepFrame(1);
     if (e.key === "Escape") closeModal();
   };
   document.addEventListener("keydown", handleKey);
 
-  // Store handlers for cleanup
+  // Store cleanup
   elements.modalOverlay.dataset.handlersAttached = "true";
   elements.modalOverlay._cleanupHandlers = {
     handleKey,
@@ -418,7 +428,6 @@ export function openModal(
 
 export function closeModal() {
   if (elements.modalOverlay.classList.contains("hidden")) return;
-
   const h = elements.modalOverlay._cleanupHandlers;
   if (h) {
     document.removeEventListener("keydown", h.handleKey);
@@ -441,11 +450,9 @@ export function closeModal() {
     if (h.previewVideo) h.previewVideo.remove();
   }
   delete elements.modalOverlay._cleanupHandlers;
-
   elements.modalOverlay.classList.add("hidden");
   elements.modalVideoPlayer.pause();
   elements.modalVideoPlayer.removeAttribute("src");
   elements.modalVideoPlayer.load();
-
   if (elements.modalShotList) elements.modalShotList.innerHTML = "";
 }

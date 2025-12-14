@@ -29,49 +29,127 @@ body {
   align-items: center;
 }
 
-/* Form gọn gàng */
+/* Form Layout */
 .compact-form {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-width: 600px;
+  max-width: 900px;
+}
+
+/* Container cho các dòng input động */
+#query-inputs-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
 }
 
 .search-row {
   display: flex;
-  gap: 5px;
+  gap: 8px;
+  align-items: center;
 }
 
-#main-query {
+/* Input chính - To và Cao hơn */
+.main-query-input {
   flex-grow: 1;
-  padding: 8px;
+  padding: 10px 12px;
   font-size: 14px;
   border: 1px solid #ccc;
   border-radius: 4px;
+  outline: none;
+  transition: border-color 0.2s;
 }
 
+.main-query-input:focus {
+  border-color: #0077b6;
+}
+
+/* Radio Button */
+.query-row input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  margin: 0;
+}
+
+/* Nút xóa dòng input */
+.remove-query-btn {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  width: 36px;
+  height: 38px;
+  /* Khớp chiều cao input */
+  cursor: pointer;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Hàng chứa các nút hành động */
+.search-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 5px;
+  flex-wrap: wrap;
+}
+
+/* Các nút bấm chung */
 #search-btn,
-#toggle-filters-btn {
-  padding: 8px 15px;
+#add-query-btn,
+#toggle-filters-btn,
+#toggle-group-shots-btn {
+  padding: 0 16px;
+  height: 38px;
   font-size: 14px;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  background-color: #0077b6;
   color: white;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
 }
 
-#toggle-filters-btn {
+#search-btn {
+  background-color: #0077b6;
+}
+
+#search-btn:hover {
+  background-color: #005f91;
+}
+
+#add-query-btn {
+  background-color: #28a745;
+}
+
+#add-query-btn:hover {
+  background-color: #218838;
+}
+
+#toggle-filters-btn,
+#toggle-group-shots-btn {
   background-color: #6c757d;
 }
 
-/* Filters */
+#toggle-group-shots-btn.active {
+  background-color: #e76f51;
+}
+
+/* === FILTERS (ADVANCED) === */
 .compact-filters {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 12px;
   border-top: 1px solid #eee;
-  padding-top: 8px;
+  padding-top: 10px;
+  background: #fdfdfd;
 }
 
 .compact-filters.hidden {
@@ -80,7 +158,7 @@ body {
 
 .filter-row {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
 }
 
@@ -93,8 +171,7 @@ body {
 }
 
 #audio-filter {
-  width: 100%;
-  padding: 8px;
+  min-width: 200px;
 }
 
 .object-controls input[type="number"] {
@@ -103,7 +180,7 @@ body {
 
 #add-object-btn {
   padding: 6px 12px;
-  background: #28a745;
+  background: #17a2b8;
   color: white;
   border: none;
   border-radius: 3px;
@@ -114,14 +191,14 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
-  margin-top: 5px;
+  width: 100%;
 }
 
 .object-item {
   font-size: 12px;
   background: #e9ecef;
   padding: 4px 8px;
-  border-radius: 3px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   gap: 5px;
@@ -141,6 +218,18 @@ body {
   padding: 0;
 }
 
+/* === BUTTON LOGIN === */
+#login-btn {
+  padding: 8px 20px;
+  height: 38px;
+  background: #e76f51;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
 /* === MAIN CONTENT === */
 main {
   padding: 0 15px 20px 15px;
@@ -152,7 +241,7 @@ main {
   gap: 15px;
 }
 
-/* === RESULT CARD === */
+/* === RESULT CARD (FLAT) === */
 .result-item {
   background: #fff;
   border: 1px solid #ddd;
@@ -172,20 +261,20 @@ main {
   display: block;
 }
 
-/* Vùng Hover Preview */
 .hover-preview {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 240px;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.3);
   display: none;
   z-index: 10;
   pointer-events: none;
 }
 
-.result-item:hover .hover-preview {
+.result-item:hover .hover-preview,
+.shot-group-card:hover .hover-preview {
   display: block;
 }
 
@@ -193,11 +282,17 @@ main {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  opacity: 0;
+}
+
+/* Class này sẽ được JS thêm vào khi video đã load xong frame đầu tiên */
+.hover-preview video.is-playing {
+  opacity: 1;
 }
 
 /* Thông tin Text */
 .result-info {
-  padding: 8px 10px;
+  padding: 10px;
   position: relative;
   padding-bottom: 40px;
 }
@@ -214,16 +309,18 @@ main {
 .result-scores {
   font-size: 11px;
   color: #666;
-  margin: 0;
   line-height: 1.4;
 }
 
 .result-scores span {
   display: inline-block;
   margin-right: 8px;
+  background: #f0f0f0;
+  padding: 2px 5px;
+  border-radius: 3px;
 }
 
-/* === NÚT SUBMIT TRÊN CARD === */
+/* Nút Submit trên Card */
 .card-submit-btn {
   position: absolute;
   bottom: 8px;
@@ -236,7 +333,6 @@ main {
   font-size: 12px;
   font-weight: bold;
   cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   z-index: 20;
 }
 
@@ -244,9 +340,82 @@ main {
   background-color: #218838;
 }
 
-.card-submit-btn:active {
-  transform: translateY(1px);
+/* === SHOT GROUP CARD (FIXED) === */
+.shot-group-card {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  position: relative;
+  /* Quan trọng để chứa preview */
+  transition: transform 0.2s, box-shadow 0.2s;
 }
+
+.shot-group-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Lưới ảnh thumbnails */
+.shot-thumbnails-grid {
+  width: 100%;
+  height: 240px;
+  /* Cố định chiều cao giống flat card */
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 1px;
+  background: #ccc;
+}
+
+.shot-thumbnails-grid.items-1 {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+}
+
+.shot-thumbnails-grid.items-2 {
+  grid-template-columns: 100%;
+  grid-template-rows: 50% 50%;
+}
+
+.shot-thumbnails-grid img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Video Preview cho Group Card (Đè lên lưới ảnh) */
+.shot-group-card .hover-preview {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 240px;
+  background: rgba(0, 0, 0, 0.3);
+  display: none;
+  z-index: 10;
+}
+
+.shot-group-card:hover .hover-preview {
+  display: block;
+}
+
+.shot-info {
+  padding: 10px;
+  border-top: 1px solid #eee;
+}
+
+.shot-info h3 {
+  margin: 0 0 5px 0;
+  font-size: 14px;
+}
+
+.shot-stats {
+  font-size: 12px;
+  color: #666;
+}
+
 
 /* === BUTTON SCROLL TO TOP === */
 #scroll-top-btn {
@@ -264,7 +433,9 @@ main {
   box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
   z-index: 950;
   opacity: 0.8;
-  transition: opacity 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 #scroll-top-btn:hover {
@@ -272,91 +443,136 @@ main {
   background-color: #0a9396;
 }
 
-/* === MODAL & TIMELINE === */
+/* === MODAL & VIDEO PLAYER (RESTORED & RESIZED) === */
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.75);
+  background-color: rgba(0, 0, 0, 0.85);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
+  backdrop-filter: blur(5px);
 }
 
 .modal-overlay.hidden {
   display: none;
 }
 
-.modal-content {
+.modal-content-wrapper {
   background-color: #fff;
-  padding: 20px;
   border-radius: 8px;
-  width: 80%;
-  max-width: 900px;
+
+  /* Size to hơn */
+  width: 98%;
+  max-width: 1600px;
+  height: 90vh;
+
+  display: flex;
+  overflow: hidden;
   position: relative;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.modal-video-title {
+  width: 80%;
+}
+
+.modal-player-section {
+  flex: 4;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: #ffffff;
+  /* Đổi nền section cha thành trắng luôn cho chắc */
+  height: 100%;
+}
+
+.modal-player-section h3 {
+  padding: 0px;
+  margin: 0;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8), transparent);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 20;
+  color: white;
+  font-size: 16px;
+  pointer-events: none;
 }
 
 .close-btn {
   position: absolute;
   top: 10px;
-  right: 15px;
-  font-size: 28px;
-  border: none;
+  right: 20px;
+  font-size: 30px;
+  color: white;
   background: none;
+  border: none;
   cursor: pointer;
+  z-index: 30;
+  text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
 }
 
 .video-player-wrapper {
   flex: 1;
-  /* Chiếm toàn bộ không gian còn thừa */
   display: flex;
   flex-direction: column;
   justify-content: center;
-  /* Căn video vào giữa theo chiều dọc */
   align-items: center;
-  min-height: 0;
-  /* QUAN TRỌNG: Cho phép Flex item thu nhỏ hơn nội dung con */
   background: #000;
-  position: relative;
   width: 100%;
+  overflow: hidden;
+  position: relative;
 }
 
 .video-player-wrapper video {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  /* Đảm bảo video luôn nằm trọn trong khung, không bị cắt */
-  max-height: 100%;
 }
 
-/* --- UPDATED: Thanh timeline to hơn --- */
+/* Timeline Style (RESTORED) */
 .video-timeline {
   width: 100%;
-  height: 40px;
-  background: #333;
+  height: 60px;
+  background: #222;
   cursor: pointer;
   position: relative;
   z-index: 50;
-  /* Đảm bảo nổi lên trên */
   flex-shrink: 0;
-  /* Không bị co lại */
+  transition: height 0.1s;
 }
 
+
+/* Red Shot Bar (RESTORED) */
+.shot-highlight-bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background-color: rgba(220, 53, 69, 0.7);
+  pointer-events: none;
+  z-index: 20;
+}
+
+/* Timeline Preview (RESTORED) */
 .timeline-preview {
   position: absolute;
+  bottom: 40px;
   left: 50%;
   transform: translateX(-50%);
-  width: 160px;
-  height: 90px;
+  width: 180px;
+  height: 100px;
   background: #000;
   border: 2px solid #fff;
   display: none;
   pointer-events: none;
   z-index: 1001;
-  bottom: 36px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
 }
 
 .timeline-preview img {
@@ -367,7 +583,7 @@ main {
 
 .timeline-preview .time-label {
   position: absolute;
-  bottom: -20px;
+  bottom: -25px;
   left: 50%;
   transform: translateX(-50%);
   background: rgba(0, 0, 0, 0.8);
@@ -377,213 +593,93 @@ main {
   border-radius: 4px;
 }
 
-/* --- UPDATED: Bố cục thanh điều khiển Frame & Submit --- */
+/* Controls (Frame Nav + Submit) */
 .frame-controls {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 15px;
-  background: #f0f0f0;
-  color: #333;
+  padding: 15px 20px;
+  /* Tăng padding chút cho thoáng */
+  background: #ffffff;
+  /* CŨ: #1a1a1a -> MỚI: #ffffff (Trắng) */
+  border-top: 1px solid #ddd;
+  /* Đổi màu viền cho nhẹ nhàng */
   flex-shrink: 0;
-  /* QUAN TRỌNG: Không bao giờ bị co lại khi video to ra */
-  z-index: 60;
-  border-top: 1px solid #ccc;
+  color: #333;
+  /* Chữ màu đen */
 }
 
-/* Nhóm nút điều khiển frame nằm ở giữa hoặc bên phải */
 .frame-navigation {
   display: flex;
   align-items: center;
-  gap: 15px;
-  margin-left: auto;
-  /* Đẩy về phía phải nếu muốn, hoặc bỏ để căn đều */
-  margin-right: auto;
-  /* Để căn giữa trong không gian còn lại */
+  gap: 10px;
+  margin: 0 auto;
 }
 
 .frame-btn {
-  background: #0077b6;
-  color: white;
-  border: none;
-  padding: 5px 15px;
+  background: #f0f0f0;
+  /* Nền xám nhạt */
+  color: #333;
+  /* Chữ đen */
+  border: 1px solid #ccc;
+  padding: 8px 16px;
+  /* Nút to ra một chút */
   border-radius: 4px;
   cursor: pointer;
   font-size: 18px;
   font-weight: bold;
-  min-width: 40px;
+  min-width: 45px;
 }
 
-/* Style cho nút Submit trong modal */
-.modal-submit-btn {
-  background: #2a9d8f;
-  color: white;
-  border: none;
-  padding: 8px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
-  font-size: 14px;
-}
-
-.modal-submit-btn:hover {
-  background: #21867a;
-}
-
-.frame-input-group {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-weight: bold;
-  color: #555;
+.frame-btn:hover {
+  background: #e0e0e0;
+  border-color: #bbb;
 }
 
 .frame-input {
-  width: 70px;
-  padding: 5px;
+  width: 80px;
+  padding: 8px;
   text-align: center;
+  background: #ffffff;
+  /* Nền trắng */
   border: 1px solid #ccc;
+  color: #333;
+  /* Chữ đen */
   border-radius: 4px;
   font-weight: bold;
+  font-size: 15px;
+}
+
+/* 4. Nhóm chứa input */
+.frame-input-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #333;
+  /* Màu chữ "/ Total frames" */
   font-size: 14px;
+  font-weight: 600;
 }
 
-.frame-input::-webkit-outer-spin-button,
-.frame-input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-.frame-input[type=number] {
-  -moz-appearance: textfield;
-}
-
-/* Toggle Button Style */
-#toggle-group-shots-btn {
-  padding: 8px 15px;
-  font-size: 14px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
-  transition: background 0.3s;
-  background-color: #6c757d;
-  /* Default OFF color */
+.modal-submit-btn {
+  background: #28a745;
   color: white;
-}
-
-#toggle-group-shots-btn.active {
-  background-color: #2a9d8f;
-  /* ON color */
-}
-
-/* === SHOT GROUP CARD === */
-.shot-group-card {
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  overflow: hidden;
+  border: none;
+  padding: 16px 24px;
+  border-radius: 4px;
   cursor: pointer;
-  transition: transform 0.2s;
+  font-weight: bold;
 }
 
-.shot-group-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+.modal-submit-btn:hover {
+  background: #218838;
 }
 
-.shot-thumbnails-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr 1fr;
-  width: 100%;
-  height: 240px;
-  gap: 1px;
-  background: #ccc;
-}
-
-.shot-thumbnails-grid img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-/* Xử lý layout grid khi có ít ảnh */
-.shot-thumbnails-grid.items-1 {
-  grid-template-columns: 1fr;
-  grid-template-rows: 1fr;
-}
-
-.shot-thumbnails-grid.items-2 {
-  grid-template-columns: 100%;
-  grid-template-rows: 50% 50%;
-}
-
-
-
-
-.shot-info {
-  padding: 10px;
-  border-top: 1px solid #eee;
-}
-
-.shot-info h3 {
-  margin: 0 0 5px 0;
-  font-size: 14px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.shot-stats {
-  font-size: 12px;
-  color: #666;
-}
-
-/* === MODAL LAYOUT MỚI === */
-.modal-content-wrapper {
-  background-color: #fff;
-  border-radius: 8px;
-  width: 90%;
-  height: 85vh;
-  display: flex;
-  overflow: hidden;
-  /* Quan trọng: cắt phần thừa */
-  position: relative;
-}
-
-.modal-player-section {
-  flex: 3;
-  padding: 0;
-  /* Xóa padding để dễ căn chỉnh */
-  display: flex;
-  flex-direction: column;
-  /* Xếp dọc: Video ở trên, Controls ở dưới */
-  position: relative;
-  background: #000;
-  color: #fff;
-  height: 100%;
-  /* Full chiều cao wrapper */
-}
-
-.modal-player-section h3 {
-  padding: 15px;
-  margin: 0;
-  background: rgba(0, 0, 0, 0.5);
-  /* Nền mờ đè lên video nếu cần */
-  position: absolute;
-  /* Đè lên góc trên để tiết kiệm chỗ */
-  top: 0;
-  left: 0;
-  z-index: 20;
-  font-size: 14px;
-  pointer-events: none;
-  /* Để click xuyên qua nếu cần */
-}
-
+/* Sidebar */
 .modal-sidebar {
   flex: 1;
   min-width: 250px;
+  max-width: 350px;
   background: #f8f9fa;
   border-left: 1px solid #ddd;
   display: flex;
@@ -595,6 +691,8 @@ main {
   margin: 0;
   background: #e9ecef;
   border-bottom: 1px solid #ddd;
+  font-size: 14px;
+  color: #333;
 }
 
 .shot-list-container {
@@ -603,17 +701,18 @@ main {
   padding: 10px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .sidebar-keyframe-item {
   display: flex;
   gap: 10px;
   cursor: pointer;
-  padding: 5px;
-  border-radius: 4px;
+  padding: 8px;
+  border-radius: 6px;
   transition: background 0.2s;
-  border: 1px solid transparent;
+  background: #fff;
+  border: 1px solid #eee;
 }
 
 .sidebar-keyframe-item:hover {
@@ -621,15 +720,15 @@ main {
 }
 
 .sidebar-keyframe-item.active {
-  background: #d1e7dd;
-  border-color: #198754;
+  border-color: #0077b6;
+  background: #e3f2fd;
 }
 
 .sidebar-keyframe-item img {
-  width: 80px;
+  width: 90px;
   height: 60px;
   object-fit: cover;
-  border-radius: 2px;
+  border-radius: 4px;
 }
 
 .sidebar-info {
@@ -639,33 +738,10 @@ main {
   justify-content: center;
 }
 
-/* --- RED SHOT TIMELINE --- */
-.shot-highlight-bar {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  background-color: rgba(220, 53, 69, 0.8);
-  /* Màu đỏ */
-  z-index: 5;
-  pointer-events: none;
-}
-
-/* Override nút close để hiển thị trên nền đen */
-.modal-player-section .close-btn {
-  color: #fff;
-  z-index: 30;
-  /* Cao hơn title */
-  top: 10px;
-  right: 15px;
-}
-
+/* Highlight Active Card in List */
 .active-viewed-card {
-  border: 3px solid #2a9d8f !important;
-  /* Viền xanh nổi bật */
-  box-shadow: 0 0 15px rgba(42, 157, 143, 0.6) !important;
-  transform: scale(1.02);
-  /* Phóng to nhẹ */
-  transition: all 0.2s ease;
+  border: 3px solid #0077b6 !important;
+  box-shadow: 0 0 15px rgba(0, 119, 182, 0.6) !important;
   z-index: 5;
-  /* Nổi lên trên các card khác */
+  transform: scale(1.02);
 }
