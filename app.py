@@ -2,21 +2,48 @@ import logging
 import os
 import traceback
 import requests
-from flask import Flask, jsonify, render_template, request, send_from_directory
+from flask import (
+    Flask,
+    jsonify,
+    render_template,
+    request,
+    send_from_directory,
+    Response,
+    stream_with_context,
+)
 import config
 from retrieval_system import VideoRetrievalSystem
 from utils.video_metadata import load_shot_boundaries, load_video_metadata
 
+# Import module Automation Bot mới
+from utils.automation import AudioAutomationBot
+
 # ... (Logger setup giữ nguyên) ...
+# --- CẤU HÌNH LOGGING ---
+log_file = "system.log"
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] - %(message)s",
+    handlers=[logging.FileHandler(log_file), logging.StreamHandler()],
+)
 logger = logging.getLogger(__name__)
 app = Flask(__name__)
 
 VIDEO_METADATA = load_video_metadata("video_metadata.json")
 VIDEO_SHOTS = load_shot_boundaries(os.path.join("data", "shots"))
 
+# --- KHỞI TẠO HỆ THỐNG TÌM KIẾM & AUDIO BOT ---
+search_system = None
+audio_bot = None  # Biến toàn cục cho bot
+
 try:
     search_system = VideoRetrievalSystem(re_ingest=False)
     logger.info("Search system initialized successfully!")
+
+    # Khởi tạo Audio Bot nhưng chưa chạy vòng lặp, chờ lệnh từ API
+    audio_bot = AudioAutomationBot(search_system)
+    logger.info("Audio Automation Bot initialized.")
+
 except Exception as e:
     logger.error(f"Failed to initialize search system: {e}")
     search_system = None
@@ -33,15 +60,78 @@ def find_shot_for_keyframe(video_id, keyframe_index):
     return None
 
 
+# =======================================================
+# ROUTES GIAO DIỆN (VIEWS)
+# =======================================================
+
+
 @app.route("/")
 def home():
     return render_template("index.html")
 
 
-# --- API AUDIO (Giữ nguyên) ---
 @app.route("/audio")
 def audio_page():
+    """
+    Giao diện Audio Automation riêng biệt.
+    Sử dụng template audio.html và logic audio.js.
+    """
     return render_template("audio.html")
+
+
+# =======================================================
+# API ROUTES CHO AUTOMATION BOT (NEW)
+# =======================================================
+
+
+@app.route("/api/audio/start", methods=["POST"])
+def start_audio_bot():
+    """Kích hoạt bot: Load Whisper và bắt đầu polling DRES"""
+    if not audio_bot:
+        return (
+            jsonify({"error": "Audio Bot not initialized (Search system failed?)"}),
+            500,
+        )
+
+    data = request.get_json() or {}
+    session_id = data.get("sessionId")
+    evaluation_id = data.get("evaluationId")
+
+    if not session_id or not evaluation_id:
+        return jsonify({"error": "Missing sessionId or evaluationId"}), 400
+
+    try:
+        # Hàm start_loop sẽ chạy thread riêng
+        audio_bot.start_loop(session_id, evaluation_id)
+        return jsonify({"status": "started", "message": "Automation loop started."})
+    except Exception as e:
+        logger.error(f"Failed to start bot: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/audio/stop", methods=["POST"])
+def stop_audio_bot():
+    """Dừng bot"""
+    if audio_bot:
+        audio_bot.stop_loop()
+    return jsonify({"status": "stopped", "message": "Automation loop stopped."})
+
+
+@app.route("/api/audio/stream")
+def audio_stream():
+    """Server-Sent Events (SSE) để đẩy log và kết quả xuống frontend"""
+    if not audio_bot:
+        return jsonify({"error": "Bot not init"}), 500
+
+    # stream_with_context giúp giữ context Flask trong generator
+    return Response(
+        stream_with_context(audio_bot.event_stream()), mimetype="text/event-stream"
+    )
+
+
+# =======================================================
+# API ROUTES CHÍNH CỦA HỆ THỐNG (OLD)
+# =======================================================
 
 
 # --- UPDATED SEARCH API ---
